@@ -1,15 +1,39 @@
+from xml.dom.minidom import Attr
 import dustpy as dp
+import dustpy.constants as c
 import numpy as np
+from simframe import Instruction
+from simframe import Integrator
 from simframe.frame import Field
 
 
 class Simulation(dp.Simulation):
 
-    __name__ = "TwoPopPy"
+    # Exclude the following functions from the from DustPy inherited object
+    _excludefromparent = [
+        "checkmassconservation",
+        "setdustintegrator"
+    ]
 
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
+
+        # Todo: Deleting not needed entries from ini object
+
+        # Deleting Fields that are not needed
+        del(self.grid.m)
+        del(self.grid.Nm)
+
+    # Note: the next two functions are to hide methods from DustPy that are not used in TwoPopPy
+    # I have to check if there is a cleaner way of doing this.
+    def __getattribute__(self, __name):
+        if __name in super(dp.Simulation, self).__getattribute__("_excludefromparent"):
+            raise AttributeError(__name)
+        return super(dp.Simulation, self).__getattribute__(__name)
+
+    def __dir__(self):
+        return sorted((set(dir(self.__class__)) | set(self.__dict__.keys())) - set(self._excludefromparent))
 
     def initialize(self):
         '''Function initializes the simulation frame.
@@ -20,14 +44,51 @@ class Simulation(dp.Simulation):
         if not isinstance(self.grid.Nr, Field):
             self.makegrids()
 
-        # Shapes needed for array initialization
-        shape1 = (int(self.grid.Nr))
-        shape1p1 = (int(self.grid.Nr)+1)
-        shape2 = (int(self.grid.Nr), int(self.grid._Nm))
-        shape2ravel = (int(self.grid.Nr*self.grid._Nm))
-        shape2p1 = (int(self.grid.Nr)+1, int(self.grid._Nm))
-        shape3 = (int(self.grid.Nr), int(
-            self.grid._Nm), int(self.grid._Nm))
+        # Set integration variable
+        if self.t is None:
+            self.addintegrationvariable("t", 0., description="Time [s]")
+            self.t.cfl = 0.1
+
+            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific time step function
+            self.t.updater = dp.std.sim.dt
+
+            self.t.snapshots = np.logspace(3., 5., num=21, base=10.) * c.year
+
+        # Initialize groups
+        self._initializestar()
+        self._initializegrid()
+        self._initializegas()
+        self._initializedust()
+
+        # Set integrator
+        if self.integrator is None:
+            # Todo: Add instructions for dust quantities
+            instructions = [
+                Instruction(dp.std.gas.impl_1_direct,
+                            self.gas.Sigma,
+                            controller={"rhs": self.gas._rhs
+                                        },
+                            description="Gas: implicit 1st-order direct solver"
+                            ),
+            ]
+            self.integrator = Integrator(
+                self.t, description="Default integrator")
+            self.integrator.instructions = instructions
+
+        # Set writer
+        if self.writer is None:
+            self.writer = dp.utils.hdf5writer()
+
+    def run(self):
+        """This functions runs the simulation."""
+        # Print welcome message
+        if self.verbosity > 0:
+            msg = ""
+            msg += "\TwoPopPy v{}".format(self.__version__)
+            msg += "\n"
+            print(msg)
+        # Actually run the simulation
+        super(dp.Simulation, self).run()
 
     def makegrids(self):
         '''Function creates radial grid.
@@ -67,3 +128,8 @@ class Simulation(dp.Simulation):
             "ri", ri, description="Radial grid cell interfaces [cm]", constant=True)
         self.grid.addfield(
             "A", A, description="Radial grid annulus area [cm²]", constant=True)
+
+    def _initializedust(self):
+        '''Function to initialize dust quantities'''
+        # Todo: write this function
+        pass
