@@ -1,2 +1,8 @@
+from twopoppy.simulation import Simulation
+
 __name__ = "twopoppy"
 __version__ = "0.0.1"
+
+Simulation.__version__ = __version__
+
+__all__ = ["Simulation"]
