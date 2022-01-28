@@ -24,15 +24,21 @@ class Simulation(dp.Simulation):
         # Deleting Fields that are not needed
         del(self.grid.m)
         del(self.grid.Nm)
+        del(self.dust.coagulation)
+        del(self.dust.kernel)
+        del(self.dust.p)
+        del(self.dust.S.coag)
 
     # Note: the next two functions are to hide methods from DustPy that are not used in TwoPopPy
     # I have to check if there is a cleaner way of doing this.
     def __getattribute__(self, __name):
+        '''This function raises an attribute error if the hidden attributes are accessed.'''
         if __name in super(dp.Simulation, self).__getattribute__("_excludefromparent"):
             raise AttributeError(__name)
         return super(dp.Simulation, self).__getattribute__(__name)
 
     def __dir__(self):
+        '''This function hides all attributes in _excludefromparten from inherited DustPy object. It is only hiding them. They can still be accessed.'''
         return sorted((set(dir(self.__class__)) | set(self.__dict__.keys())) - set(self._excludefromparent))
 
     def initialize(self):
@@ -84,7 +90,7 @@ class Simulation(dp.Simulation):
         # Print welcome message
         if self.verbosity > 0:
             msg = ""
-            msg += "\TwoPopPy v{}".format(self.__version__)
+            msg += "\nTwoPopPy v{}".format(self.__version__)
             msg += "\n"
             print(msg)
         # Actually run the simulation
@@ -132,4 +138,172 @@ class Simulation(dp.Simulation):
     def _initializedust(self):
         '''Function to initialize dust quantities'''
         # Todo: write this function
-        pass
+
+        # Shapes needed to initialize arrays
+        shape1 = (int(self.grid.Nr))
+        shape2 = (int(self.grid.Nr), int(self.grid._Nm))
+        shape2ravel = (int(self.grid.Nr*self.grid._Nm))
+        shape2p1 = (int(self.grid.Nr)+1, int(self.grid._Nm))
+        shape3 = (int(self.grid.Nr), int(
+            self.grid._Nm), int(self.grid._Nm))
+
+        # Particle size
+        # Todo: this needs to be modified for TwoPopPy
+        if self.dust.a is None:
+            self.dust.addfield(
+                "a", np.ones(shape2), description="Particle size [cm]")
+        # Diffusivity
+        if self.dust.D is None:
+            self.dust.addfield(
+                "D", np.zeros(shape2), description="Diffusivity [cm²/s]")
+            self.dust.D.updater = dp.std.dust.D
+        # Deltas
+        if self.dust.delta.rad is None:
+            delta = self.ini.gas.alpha * np.ones(shape1)
+            self.dust.delta.addfield(
+                "rad", delta, description="Radial mixing parameter")
+        if self.dust.delta.turb is None:
+            delta = self.ini.gas.alpha * np.ones(shape1)
+            self.dust.delta.addfield(
+                "turb", delta, description="Turbulent mixing parameter")
+        if self.dust.delta.vert is None:
+            delta = self.ini.gas.alpha * np.ones(shape1)
+            self.dust.delta.addfield(
+                "vert", delta, description="Vertical mixing parameter")
+        # Vertically integrated dust to gas ratio
+        if self.dust.eps is None:
+            self.dust.addfield(
+                "eps", np.zeros(shape1), description="Dust-to-gas ratio")
+            self.dust.eps.updater = dp.std.dust.eps
+        # Fluxes
+        if self.dust.Fi.adv is None:
+            self.dust.Fi.addfield(
+                "adv", np.zeros(shape2p1), description="Advective flux [g/cm/s]")
+            self.dust.Fi.adv.updater = dp.std.dust.F_adv
+        if self.dust.Fi.diff is None:
+            self.dust.Fi.addfield(
+                "diff", np.zeros(shape2p1), description="Diffusive flux [g/cm/s]")
+            self.dust.Fi.diff.updater = dp.std.dust.F_diff
+        if self.dust.Fi.tot is None:
+            self.dust.Fi.addfield(
+                "tot", np.zeros(shape2p1), description="Total flux [g/cm/s]")
+            self.dust.Fi.tot.updater = dp.std.dust.F_tot
+        # Filling factor
+        if self.dust.fill is None:
+            self.dust.addfield(
+                "fill", np.ones(shape2), description="Filling factor")
+        # Scale height
+        if self.dust.H is None:
+            self.dust.addfield(
+                "H", np.zeros(shape2), description="Scale heights [cm]")
+            self.dust.H.updater = dp.std.dust.H
+        # Midplane mass density
+        if self.dust.rho is None:
+            self.dust.addfield(
+                "rho", np.zeros(shape2), description="Midplane mass density per mass bin [g/cm³]")
+            self.dust.rho.updater = dp.std.dust.rho_midplane
+        # Solid state density
+        if self.dust.rhos is None:
+            rhos = self.ini.dust.rhoMonomer * np.ones(shape2)
+            self.dust.addfield(
+                "rhos", rhos, description="Solid state density [g/cm³]")
+        # Source terms
+        if self.dust.S.ext is None:
+            self.dust.S.addfield(
+                "ext", np.zeros(shape2), description="External sources [g/cm²/s]")
+        if self.dust.S.hyd is None:
+            self.dust.S.addfield(
+                "hyd", np.zeros(shape2), description="Hydrodynamic sources [g/cm²/s]")
+            self.dust.S.hyd.updater = dp.std.dust.S_hyd
+        if self.dust.S.tot is None:
+            self.dust.S.addfield(
+                "tot", np.zeros(shape2), description="Tot sources [g/cm²/s]")
+            # Todo: TwoPopPy specific function needed here
+            self.dust.S.tot.updater = dp.std.dust.S_tot
+        # Stokes number
+        if self.dust.St is None:
+            self.dust.addfield(
+                "St", np.zeros(shape2), description="Stokes number")
+            self.dust.St.updater = dp.std.dust.St_Epstein_StokesI
+        # Velocities
+        if self.dust.v.frag is None:
+            vfrag = self.ini.dust.vfrag * np.ones(shape1)
+            self.dust.v.addfield(
+                "frag", vfrag, description="Fragmentation velocity [cm/s]")
+        if self.dust.v.rel.azi is None:
+            self.dust.v.rel.addfield(
+                "azi", np.zeros(shape3), description="Relative azimuthal velocity [cm/s]")
+            self.dust.v.rel.azi.updater = dp.std.dust.vrel_azimuthal_drift
+        if self.dust.v.rel.brown is None:
+            self.dust.v.rel.addfield(
+                "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]")
+            # Todo: This functions needs to be modified for TwoPopPy
+            self.dust.v.rel.brown.updater = dp.std.dust.vrel_brownian_motion
+        if self.dust.v.rel.rad is None:
+            self.dust.v.rel.addfield(
+                "rad", np.zeros(shape3), description="Relative radial velocity [cm/s]")
+            self.dust.v.rel.rad.updater = dp.std.dust.vrel_radial_drift
+        if self.dust.v.rel.turb is None:
+            self.dust.v.rel.addfield(
+                "turb", np.zeros(shape3), description="Relative turbulent velocity [cm/s]")
+            self.dust.v.rel.turb.updater = dp.std.dust.vrel_turbulent_motion
+        if self.dust.v.rel.vert is None:
+            self.dust.v.rel.addfield(
+                "vert", np.zeros(shape3), description="Relative vertical settling velocity [cm/s]")
+            self.dust.v.rel.vert.updater = dp.std.dust.vrel_vertical_settling
+        if self.dust.v.rel.tot is None:
+            self.dust.v.rel.addfield(
+                "tot", np.zeros(shape3), description="Total relative velocity [cm/s]")
+            self.dust.v.rel.tot.updater = dp.std.dust.vrel_tot
+        if self.dust.v.driftmax is None:
+            self.dust.v.addfield(
+                "driftmax", np.zeros(shape1), description="Maximum drift velocity [cm/s]")
+            self.dust.v.driftmax.updater = dp.std.dust.vdriftmax
+        if self.dust.v.rad is None:
+            self.dust.v.addfield(
+                "rad", np.zeros(shape2), description="Radial velocity [cm/s]")
+            self.dust.v.rad.updater = dp.std.dust.vrad
+        # Floor value
+        if self.dust.SigmaFloor is None:
+            # Todo: What is a reasonable value for this in TwoPopPy
+            SigmaFloor = 1.e-100 * np.ones(shape2)
+            self.dust.addfield(
+                "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]")
+        # Surface density, if not set
+        if self.dust.Sigma is None:
+            # Todo: This needs to be replaced with TwoPopPy specific functions
+            Sigma = dp.std.dust.MRN_distribution(self)
+            Sigma = np.where(Sigma <= self.dust.SigmaFloor,
+                             0.1*self.dust.SigmaFloor,
+                             Sigma)
+            self.dust.addfield(
+                "Sigma", Sigma, description="Surface density per mass bin [g/cm²]")
+        # Todo: Differentiator and Jacobinator need to be modified for TwoPopPy
+        self.dust.Sigma.differentiator = dp.std.dust.Sigma_deriv
+        self.dust.Sigma.jacobinator = dp.std.dust.jacobian
+        # Hidden fields
+        # We store the old values of the surface density in a hidden field
+        # to calculate the fluxes through the boundaries in case of implicit integration.
+        self.dust.addfield(
+            "_SigmaOld", self.dust.Sigma, description="Previous value of surface density [g/cm²]")
+        # The right-hand side of the matrix equation is stored in a hidden field
+        self.dust.addfield(
+            "_rhs", np.zeros(shape2ravel), description="Right-hand side of matrix equation [g/cm²]")
+        # Boundary conditions
+        if self.dust.boundary.inner is None:
+            self.dust.boundary.inner = dp.utils.Boundary(
+                self.grid.r,
+                self.grid.ri,
+                self.dust.Sigma,
+                condition="const_grad"
+            )
+        if self.dust.boundary.outer is None:
+            self.dust.boundary.outer = dp.utils.Boundary(
+                self.grid.r[::-1],
+                self.grid.ri[::-1],
+                self.dust.Sigma[::-1],
+                condition="val",
+                value=0.1*self.dust.SigmaFloor[-1]
+            )
+
+        self.dust.update()
