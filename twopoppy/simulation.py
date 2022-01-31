@@ -147,8 +147,8 @@ class Simulation(dp.Simulation):
                 self.t, description="Default integrator")
             self.integrator.instructions = instructions
             # Todo: Add preparator and finalizer?
-            # self.integrator.preparator = std.sim.prepare_implicit_dust
-            # self.integrator.finalizer = std.sim.finalize_implicit_dust
+            # self.integrator.preparator = dp.std.sim.prepare_implicit_dust
+            # self.integrator.finalizer = dp.std.sim.finalize_implicit_dust
 
         # Set writer
         if self.writer is None:
@@ -156,7 +156,6 @@ class Simulation(dp.Simulation):
 
     def _initializedust(self):
         '''Function to initialize dust quantities'''
-        # Todo: write this function
 
         # Shapes needed to initialize arrays
         shape1 = (int(self.grid.Nr))
@@ -170,8 +169,8 @@ class Simulation(dp.Simulation):
         if self.dust.a is None:
             self.dust.addfield(
                 "a", np.ones(shape2), description="Particle size [cm]")
-            # Todo: TwoPopPy specific function needed here
-            self.dust.a.updater = std.dust.a
+            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
+            self.dust.a.updater = dp.std.dust.a
         # Diffusivity
         if self.dust.D is None:
             self.dust.addfield(
@@ -231,13 +230,13 @@ class Simulation(dp.Simulation):
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
                 shape1), description="Fragmentation probability")
-            # Todo: TwoPopPy specific function needed here
-            self.dust.p.frag.updater = std.dust.p_frag
+            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
+            self.dust.p.frag.updater = dp.std.dust.p_frag
         if self.dust.p.stick is None:
             self.dust.p.stick = Field(self, np.zeros(
                 shape1), description="Sticking probability")
-            # Todo: TwoPopPy specific function needed here
-            self.dust.p.stick.updater = std.dust.p_stick
+            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
+            self.dust.p.stick.updater = dp.std.dust.p_stick
         # Source terms
         if self.dust.S.ext is None:
             self.dust.S.addfield(
@@ -249,7 +248,7 @@ class Simulation(dp.Simulation):
         if self.dust.S.tot is None:
             self.dust.S.addfield(
                 "tot", np.zeros(shape2), description="Tot sources [g/cm²/s]")
-            # Todo: TwoPopPy specific function needed here
+            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.S.tot.updater = dp.std.dust.S_tot
         # Stokes number
         if self.dust.St is None:
@@ -268,8 +267,8 @@ class Simulation(dp.Simulation):
         if self.dust.v.rel.brown is None:
             self.dust.v.rel.addfield(
                 "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]")
-            # Todo: TwoPopPy specific function needed here
-            self.dust.v.rel.brown.updater = std.dust.vrel_brownian_motion
+            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
+            self.dust.v.rel.brown.updater = dp.std.dust.vrel_brownian_motion
         if self.dust.v.rel.rad is None:
             self.dust.v.rel.addfield(
                 "rad", np.zeros(shape3), description="Relative radial velocity [cm/s]")
@@ -326,11 +325,11 @@ class Simulation(dp.Simulation):
         # Hidden fields
         # We store the old values of the surface density in a hidden field
         # to calculate the fluxes through the boundaries in case of implicit integration.
-        self.dust.addfield(
-            "_SigmaOld", self.dust.Sigma, description="Previous value of surface density [g/cm²]")
+        self.dust._SigmaOld = Field(
+            self, self.dust.Sigma, description="Previous value of surface density [g/cm²]")
         # The right-hand side of the matrix equation is stored in a hidden field
-        self.dust.addfield(
-            "_rhs", np.zeros(shape2ravel), description="Right-hand side of matrix equation [g/cm²]")
+        self.dust._rhs = Field(self, np.zeros(
+            shape2ravel), description="Right-hand side of matrix equation [g/cm²]")
         # Boundary conditions
         if self.dust.boundary.inner is None:
             self.dust.boundary.inner = dp.utils.Boundary(
