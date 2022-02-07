@@ -66,7 +66,7 @@ class Simulation(dp.Simulation):
         if name in self._excludefromparent:
             self._excludefromparent.remove(name)
         return super().__setattr__(name, value)
-    
+
     def run(self):
         """This functions runs the simulation."""
         # Print welcome message
@@ -131,7 +131,7 @@ class Simulation(dp.Simulation):
             self.addintegrationvariable("t", 0., description="Time [s]")
             self.t.cfl = 0.1
 
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific time step function
+            # TODO: Placeholder! This needs to be replaced with a TwoPopPy specific time step function
             self.t.updater = dp.std.sim.dt
 
             self.t.snapshots = np.logspace(3., 5., num=21, base=10.) * c.year
@@ -144,7 +144,7 @@ class Simulation(dp.Simulation):
 
         # Set integrator
         if self.integrator is None:
-            # Todo: Add instructions for dust quantities
+            # TODO: Add instructions for dust quantities
             instructions = [
                 # Instruction(std.dust.impl_1_direct,
                 #            self.dust.Sigma,
@@ -162,7 +162,7 @@ class Simulation(dp.Simulation):
             self.integrator = Integrator(
                 self.t, description="Default integrator")
             self.integrator.instructions = instructions
-            # Todo: Add preparator and finalizer?
+            # TODO: Add preparator and finalizer?
             # self.integrator.preparator = dp.std.sim.prepare_implicit_dust
             # self.integrator.finalizer = dp.std.sim.finalize_implicit_dust
 
@@ -185,13 +185,11 @@ class Simulation(dp.Simulation):
         if self.dust.a is None:
             self.dust.addfield(
                 "a", np.ones(shape2), description="Particle size [cm]")
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.a.updater = std.dust.a
         # Particle mass
         if self.dust.m is None:
             self.dust.addfield(
                 "m", np.ones(shape2), description="Particle mass [g]")
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.m.updater = std.dust.m
         # Diffusivity
         if self.dust.D is None:
@@ -252,12 +250,10 @@ class Simulation(dp.Simulation):
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
                 shape3), description="Fragmentation probability")
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.p.frag.updater = std.dust.p_frag
         if self.dust.p.stick is None:
             self.dust.p.stick = Field(self, np.zeros(
                 shape3), description="Sticking probability")
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.p.stick.updater = std.dust.p_stick
         # Source terms
         if self.dust.S.ext is None:
@@ -270,7 +266,6 @@ class Simulation(dp.Simulation):
         if self.dust.S.tot is None:
             self.dust.S.addfield(
                 "tot", np.zeros(shape2), description="Tot sources [g/cm²/s]")
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.S.tot.updater = std.dust.S_tot
         # Stokes number
         if self.dust.St is None:
@@ -289,7 +284,6 @@ class Simulation(dp.Simulation):
         if self.dust.v.rel.brown is None:
             self.dust.v.rel.addfield(
                 "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]")
-            # Todo: Placeholder! This needs to be replaced with a TwoPopPy specific function
             self.dust.v.rel.brown.updater = std.dust.vrel_brownian_motion
         if self.dust.v.rel.rad is None:
             self.dust.v.rel.addfield(
@@ -355,29 +349,29 @@ class Simulation(dp.Simulation):
             self.dust.update()
         except:
             pass
-        
+
         # Floor value
         if self.dust.SigmaFloor is None:
-            # Todo: What is a reasonable value for this in TwoPopPy
+            # TODO: What is a reasonable value for this in TwoPopPy
             SigmaFloor = 1.e-100 * np.ones(shape2)
             self.dust.addfield(
                 "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]")
         # Surface density, if not set
         if self.dust.Sigma is None:
-            # Todo: This needs to be replaced with TwoPopPy specific functions
+            # TODO: This needs to be replaced with TwoPopPy specific functions
             Sigma = std.dust.MRN_distribution(self)
             Sigma = np.where(Sigma <= self.dust.SigmaFloor,
                              0.1*self.dust.SigmaFloor,
                              Sigma)
             self.dust.addfield(
                 "Sigma", Sigma, description="Surface density per mass bin [g/cm²]")
-        # Todo: Differentiator and Jacobinator need to be modified for TwoPopPy
+        # TODO: Differentiator and Jacobinator need to be modified for TwoPopPy
         self.dust.Sigma.differentiator = dp.std.dust.Sigma_deriv
         self.dust.Sigma.jacobinator = dp.std.dust.jacobian
-        
+
         # Fully initialize dust quantities
         self.dust.update()
-        
+
         # Hidden fields
         # We store the old values of the surface density in a hidden field
         # to calculate the fluxes through the boundaries in case of implicit integration.
