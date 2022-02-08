@@ -3,7 +3,8 @@ import dustpy.constants as c
 import numpy as np
 from simframe import Instruction
 from simframe import Integrator
-from simframe.frame import Field
+from simframe.frame import Field, Group
+import std
 
 
 class Simulation(dp.Simulation):
@@ -17,7 +18,7 @@ class Simulation(dp.Simulation):
     def __init__(self, **kwargs):
 
         super().__init__(**kwargs)
-        
+
         # Add new fields
         self.dust.m = None
         self.dust.exp = Group(self, description="Distribution exponents")
@@ -101,13 +102,13 @@ class Simulation(dp.Simulation):
         '''Function sets the mass grid using the parameters set in ``Simulation.ini``.'''
         if self.grid.ri is None:
             ri = np.logspace(np.log10(self.ini.grid.rmin), np.log10(
-                self.ini.grid.rmax), num=self.ini.grid.Nr+1, base=10.)
+                self.ini.grid.rmax), num=self.ini.grid.Nr + 1, base=10.)
             Nr = self.ini.grid.Nr
         else:
             ri = self.grid.ri
             Nr = ri.shape[0] - 1
-        r = 0.5*(ri[:-1] + ri[1:])
-        A = np.pi*(ri[1:]**2 - ri[:-1]**2)
+        r = 0.5 * (ri[:-1] + ri[1:])
+        A = np.pi * (ri[1:]**2 - ri[:-1]**2)
         self.grid.addfield(
             "Nr", Nr, description="# of radial grid cells", constant=True)
         self.grid.addfield(
@@ -176,8 +177,8 @@ class Simulation(dp.Simulation):
         # Shapes needed to initialize arrays
         shape1 = (int(self.grid.Nr))
         shape2 = (int(self.grid.Nr), int(self.grid._Nm))
-        shape2ravel = (int(self.grid.Nr*self.grid._Nm))
-        shape2p1 = (int(self.grid.Nr)+1, int(self.grid._Nm))
+        shape2ravel = (int(self.grid.Nr * self.grid._Nm))
+        shape2p1 = (int(self.grid.Nr) + 1, int(self.grid._Nm))
         shape3 = (int(self.grid.Nr), int(
             self.grid._Nm), int(self.grid._Nm))
 
@@ -320,12 +321,12 @@ class Simulation(dp.Simulation):
             self.dust.exp.addfield(
                 "frag", expfrag, description="Fragmentation distribution exponent")
         if self.dust.exp.drift is None:
-            expdrift = (self.ini.dust.distExp+1.) * np.ones(shape1)
+            expdrift = (self.ini.dust.distExp + 1.) * np.ones(shape1)
             self.dust.exp.addfield(
                 "drift", expdrift, description="Drift distribution exponent")
         # Specific particle sizes
         if self.dust.size.min is None:
-            sizemin = 0.1*self.ini.dust.aIniMax * np.ones(shape1)
+            sizemin = 0.1 * self.ini.dust.aIniMax * np.ones(shape1)
             self.dust.size.addfield(
                 "min", sizemin, description="Minimum particle size")
         if self.dust.size.max is None:
@@ -343,11 +344,11 @@ class Simulation(dp.Simulation):
                 "mean", np.zeros(shape1), description="Mass-averaged particle size")
             # Todo: TwoPopPy specific function
             self.dust.size.mean.updater = std.dust.sizemean
-            
+
         # Initialize dust quantities partly to calculate Sigma
         try:
             self.dust.update()
-        except:
+        except Exception:
             pass
 
         # Floor value
@@ -361,7 +362,7 @@ class Simulation(dp.Simulation):
             # TODO: This needs to be replaced with TwoPopPy specific functions
             Sigma = std.dust.MRN_distribution(self)
             Sigma = np.where(Sigma <= self.dust.SigmaFloor,
-                             0.1*self.dust.SigmaFloor,
+                             0.1 * self.dust.SigmaFloor,
                              Sigma)
             self.dust.addfield(
                 "Sigma", Sigma, description="Surface density per mass bin [g/cm²]")
@@ -394,7 +395,7 @@ class Simulation(dp.Simulation):
                 self.grid.ri[::-1],
                 self.dust.Sigma[::-1],
                 condition="val",
-                value=0.1*self.dust.SigmaFloor[-1]
+                value=0.1 * self.dust.SigmaFloor[-1]
             )
 
         self.dust.update()
