@@ -3,8 +3,8 @@ import dustpy.constants as c
 import numpy as np
 from simframe import Instruction
 from simframe import Integrator
-from simframe.frame import Field, Group
-import std
+from simframe.frame import Field
+from . import std
 
 
 class Simulation(dp.Simulation):
@@ -21,19 +21,20 @@ class Simulation(dp.Simulation):
 
         # Add new fields
         self.dust.m = None
-        self.dust.exp = Group(self, description="Distribution exponents")
+        self.dust.addgroup("exp", description="Distribution exponents")
         self.dust.exp.calc = None
         self.dust.exp.frag = None
         self.dust.exp.drift = None
         self.dust.exp.updater = ["calc"]
-        self.dust.size = Group(self, description="Specific particle sizes")
+        self.dust.addgroup("size", description="Specific particle sizes")
         self.dust.size.min = None
         self.dust.size.max = None
         self.dust.size.int = None
         self.dust.size.mean = None
         self.dust.size.updater = ["mean", "max", "int"]
+        # TODO: take update order from dustpy and add new quatities in the right places
         self.dust.updater = ["delta", "rhos", "fill", "exp", "size", "a", "m", "St", "H",
-                             "rho", "backreaction", "v", "D", "eps", "kernel", "p", "S"]
+                             "rho", "backreaction", "v", "D", "eps", "p", "S"]
 
         # Deleting not needed entries from ini object
         del(self.ini.dust.crateringMassRatio)
@@ -336,7 +337,7 @@ class Simulation(dp.Simulation):
         if self.dust.size.int is None:
             sizeint = np.sqrt(0.1) * self.ini.dust.aIniMax * np.ones(shape1)
             self.dust.size.addfield(
-                "int", int, description="Intermediate particle size")
+                "int", sizeint, description="Intermediate particle size")
             # Todo: TwoPopPy specific function
             self.dust.size.int.updater = std.dust.sizeint
         if self.dust.size.mean is None:
