@@ -80,13 +80,24 @@ class Simulation(dp.Simulation):
         If you want to have a custom radial grid you have to set the array of grid cell interfaces ``Simulation.grid.ri``,
         before calling ``Simulation.makegrids()``.'''
 
-        # Number of mass species. Hard coded
-        Nm = 4
-
-        # The mass grid does not exist. But we store the size of the
-        # particle dimension in a hidden variable.
+        # Number of mass species. Hard coded.
+        # The surface densities have Nm_short particle species.
+        # Other quantities need Nm_long particle species.
+        # We store them in hidden variables.
+        Nm_short = 2
+        Nm_long = 4
         self.grid.addfield(
-            "_Nm", Nm, description="# of particle species", constant=True)
+            "_Nm_short",
+            Nm_short,
+            description="# of particle species for surface densities",
+            constant=True
+        )
+        self.grid.addfield(
+            "_Nm_long",
+            Nm_long,
+            description="# of particle species for calculations",
+            constant=True
+        )
 
         self._makeradialgrid()
 
@@ -167,13 +178,19 @@ class Simulation(dp.Simulation):
         '''Function to initialize dust quantities'''
 
         # Shapes needed to initialize arrays
+        # Only radial grid
         shape1 = (int(self.grid.Nr))
-        shape2 = (int(self.grid.Nr), int(self.grid._Nm))
-        shape2Sigma = (int(self.grid.Nr), 2)
-        shape2Sigmaravel = (int(self.grid.Nr * 2))
-        shape2p1 = (int(self.grid.Nr) + 1, int(self.grid._Nm))
+        # Radial grid and long particle grid
+        shape2 = (int(self.grid.Nr), int(self.grid._Nm_long))
+        # Radial grid and short particle grid for surface densities
+        shape2Sigma = (int(self.grid.Nr), self.grid._Nm_short)
+        # Length of vector of implicit integration
+        shape2Sigmaravel = (int(self.grid.Nr * self.grid._Nm_short))
+        # Radial grid interfaces and long particle grid
+        shape2p1 = (int(self.grid.Nr) + 1, int(self.grid._Nm_long))
+        # Radial grid and twice long mass grid for relative velocities etc.
         shape3 = (int(self.grid.Nr), int(
-            self.grid._Nm), int(self.grid._Nm))
+            self.grid._Nm_long), int(self.grid._Nm_long))
 
         # Particle size
         if self.dust.a is None:
@@ -330,7 +347,7 @@ class Simulation(dp.Simulation):
             self.dust.s.addfield(
                 "aint", aint, description="Intermediate particle size")
             self.dust.s.aint.updater = std.dust.aint
-            
+
         # Initialize dust quantities partly to calculate Sigma
         try:
             self.dust.update()
