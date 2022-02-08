@@ -183,7 +183,7 @@ class Simulation(dp.Simulation):
         # Radial grid and long particle grid
         shape2 = (int(self.grid.Nr), int(self.grid._Nm_long))
         # Radial grid and short particle grid for surface densities
-        shape2Sigma = (int(self.grid.Nr), self.grid._Nm_short)
+        shape2Sigma = (int(self.grid.Nr), int(self.grid._Nm_short))
         # Length of vector of implicit integration
         shape2Sigmaravel = (int(self.grid.Nr * self.grid._Nm_short))
         # Radial grid interfaces and long particle grid
@@ -363,7 +363,7 @@ class Simulation(dp.Simulation):
         # Surface density, if not set
         if self.dust.Sigma is None:
             # TODO: This needs to be replaced with TwoPopPy specific functions
-            Sigma = std.dust.MRN_distribution(self)
+            Sigma = std.dust.Sigma_initial(self)
             Sigma = np.where(Sigma <= self.dust.SigmaFloor,
                              0.1 * self.dust.SigmaFloor,
                              Sigma)

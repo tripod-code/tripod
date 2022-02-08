@@ -9,24 +9,30 @@ import numpy as np
 
 # from simframe.integration import Scheme
 
+
 def a(sim):
     """Function calculates the particle size from the specific particle sizes and the distribution exponent.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     a : Field
         Particle sizes"""
     return dust_f.a(sim.dust.s.amin, sim.dust.s.amax, sim.dust.s.aint, sim.dust.xi.calc)
 
+
 def m(sim):
     """Function calculates the particle mass from the particle sizes.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     m : Field
@@ -38,24 +44,29 @@ def p_frag(sim):
     """Function calculates the fragmentation probability.
     It assumes a linear transition between sticking and
     fragmentation.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     pf : Field
         Fragmentation propability."""
     return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag)
 
+
 def p_stick(sim):
     """Function calculates the sticking probability.
     The sticking probability is simply 1 minus the
     fragmentation probability.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     ps : Field
@@ -65,14 +76,51 @@ def p_stick(sim):
     p[-1] = 0.
     return p
 
+
+def Sigma_initial(sim):
+    """Function calculates the initial condition fo the dust surface densities
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    Sigma : Field
+        Initial dust surface density"""
+    xi = sim.dust.xi.calc
+    xip4 = xi + 4.
+    sint = sim.dust.s.aint
+    smax = sim.dust.s.amax
+    smin = sim.dust.s.amin
+
+    # Values for xi != -4
+    S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xi+4)
+    S1 = 1. - S0
+    S = np.array([S0, S1]).T
+
+    # Values for xi == -4
+    S0_4 = np.log(sint/smin) / np.log(smax/smin)
+    S1_4 = 1. - S0_4
+    S_4 = np.array([S0_4, S1_4]).T
+
+    Sigma = sim.ini.dust.d2gRatio * sim.gas.Sigma[:, None] * \
+        np.where(xi[:, None] == -4., S_4, S)
+
+    return Sigma
+
+
 def S_tot(sim, Sigma=None):
     """Function calculates the total source terms.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
     Sigma : Field, optional, default : None
         Surface density to be used if not None
+
     Returns
     -------
     Stot : Field
@@ -87,87 +135,48 @@ def S_tot(sim, Sigma=None):
             Shyd = sim.dust.S.hyd
     return Shyd + Sext
 
+
 def vrel_brownian_motion(sim):
     """Function calculates the relative particle velocities due to Brownian motion.
     The maximum value is set to the sound speed.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     vrel : Field
         Relative velocities"""
     return dust_f.vrel_brownian_motion(sim.gas.cs, sim.dust.m, sim.gas.T)
 
+
 def xicalc(sim):
     """Function calculates the exponent of the distribution.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     xicalc : Field
         Calculated exponent of distribution"""
     return dust_f.xicalc(sim.dust.Sigma, sim.dust.s.amax, sim.dust.s.aint)
 
+
 def aint(sim):
     """Function calculates the intermediate particle size.
+
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+
     Returns
     -------
     aint : Field
         Intermediate particle size"""
     return dust_f.aint(sim.dust.s.amin, sim.dust.s.amax)
-
-# TODO: Adjust function to Twopoppy
-def MRN_distribution(sim):
-    """Function calculates the initial particle mass distribution. The parameters are taken from the
-    ``Simulation.ini`` object.
-    Parameters
-    ----------
-    sim : Frame
-        Parent simulation frame
-    Returns
-    -------
-    Sigma : Field
-        Initial dust surface density
-    Notes
-    -----
-    ``sim.ini.dust.aIniMax`` : maximum initial particle size
-    ``sim.ini.dust.d2gRatio`` : initial dust-to-gas ratio
-    ``sim.ini.dust.distExp`` : initial particle size distribution ``n(a) da ∝ a^{distExp} da``
-    ``sim.ini.dust.allowDriftingParticles`` : if ``True`` the particle size distribution
-    will be filled up to ``aIniMax``, if ``False`` the maximum particle size will be chosen
-    such that there are no drifting particles initially. This prevents a particle wave traveling
-    though the simulation, that is already drifting initially."""
-    exp = sim.ini.dust.distExp
-    # Set maximum particle size
-    if(sim.ini.dust.allowDriftingParticles):
-        aIni = sim.ini.dust.aIniMax
-    # TODO: Adjust routine for limiting max particle size to Twopoppy
-    else:
-        # Calculating pressure gradient
-        P = sim.gas.P
-        Pi = dust_f.interp1d(sim.grid.ri, sim.grid.r, P)
-        gamma = (Pi[1:] - Pi[:-1]) / (sim.grid.ri[1:] - sim.grid.ri[:-1])
-        gamma = np.abs(gamma)
-        # Exponent of pressure gradient
-        gamma *= sim.grid.r / P
-        gamma = 1. / gamma
-        # Maximum drift limited particle size with safety margin
-        ad = 1.e-4 * 2./np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma \
-            / sim.dust.fill[:, 0] * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r)**2. \
-            / sim.gas.cs**2. / gamma
-        aIni = np.minimum(sim.ini.dust.aIniMax, ad)[:, None]
-    # Fill distribution
-    ret = np.where(sim.dust.a <= aIni, sim.dust.a**(exp+4), 0.)
-    s = np.sum(ret, axis=1)[..., None]
-    s = np.where(s > 0., s, 1.)
-    # Normalize to mass
-    ret = ret / s * sim.gas.Sigma[..., None] * sim.ini.dust.d2gRatio
-    return ret
