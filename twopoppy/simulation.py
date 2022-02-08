@@ -35,14 +35,6 @@ class Simulation(dp.Simulation):
         self.dust.updater = ["delta", "rhos", "fill", "s", "xi", "a", "m", "St", "H",
                              "rho", "backreaction", "v", "D", "eps", "p", "S"]
 
-        # Deleting not needed entries from ini object
-        del(self.ini.dust.crateringMassRatio)
-        del(self.ini.dust.excavatedMass)
-        del(self.ini.dust.fragmentDistribution)
-        del(self.ini.grid.Nmbpd)
-        del(self.ini.grid.mmin)
-        del(self.ini.grid.mmax)
-
         # Deleting Fields that are not needed
         del(self.dust.coagulation)
         del(self.dust.kernel)
@@ -177,7 +169,8 @@ class Simulation(dp.Simulation):
         # Shapes needed to initialize arrays
         shape1 = (int(self.grid.Nr))
         shape2 = (int(self.grid.Nr), int(self.grid._Nm))
-        shape2ravel = (int(self.grid.Nr * self.grid._Nm))
+        shape2Sigma = (int(self.grid.Nr), 2)
+        shape2Sigmaravel = (int(self.grid.Nr * 2))
         shape2p1 = (int(self.grid.Nr) + 1, int(self.grid._Nm))
         shape3 = (int(self.grid.Nr), int(
             self.grid._Nm), int(self.grid._Nm))
@@ -314,6 +307,7 @@ class Simulation(dp.Simulation):
         if self.dust.xi.calc is None:
             self.dust.xi.addfield(
                 "calc", np.zeros(shape1), description="Calculated distribution exponent")
+<<<<<<< HEAD
             self.dust.xi.calc.updater = std.dust.xicalc
         if self.dust.xi.frag is None:
             xifrag = self.ini.dust.distExp * np.ones(shape1)
@@ -337,6 +331,38 @@ class Simulation(dp.Simulation):
             self.dust.s.addfield(
                 "aint", aint, description="Intermediate particle size")
             self.dust.s.aint.updater = std.dust.aint
+=======
+            # TODO: TwoPopPy specific function
+            self.dust.exp.calc.updater = std.dust.expcalc
+        if self.dust.exp.frag is None:
+            expfrag = self.ini.dust.distExp * np.ones(shape1)
+            self.dust.exp.addfield(
+                "frag", expfrag, description="Fragmentation distribution exponent")
+        if self.dust.exp.drift is None:
+            expdrift = (self.ini.dust.distExp + 1.) * np.ones(shape1)
+            self.dust.exp.addfield(
+                "drift", expdrift, description="Drift distribution exponent")
+        # Specific particle sizes
+        if self.dust.size.min is None:
+            sizemin = 0.1 * self.ini.dust.aIniMax * np.ones(shape1)
+            self.dust.size.addfield(
+                "min", sizemin, description="Minimum particle size")
+        if self.dust.size.max is None:
+            sizemax = self.ini.dust.aIniMax * np.ones(shape1)
+            self.dust.size.addfield(
+                "max", sizemax, description="Maximum particle size")
+        if self.dust.size.int is None:
+            sizeint = np.sqrt(0.1) * self.ini.dust.aIniMax * np.ones(shape1)
+            self.dust.size.addfield(
+                "int", sizeint, description="Intermediate particle size")
+            # TODO: TwoPopPy specific function
+            self.dust.size.int.updater = std.dust.sizeint
+        if self.dust.size.mean is None:
+            self.dust.size.addfield(
+                "mean", np.zeros(shape1), description="Mass-averaged particle size")
+            # TODO: TwoPopPy specific function
+            self.dust.size.mean.updater = std.dust.sizemean
+>>>>>>> e81a903b60b9761588460c92512f7fc5d3c9fe4e
 
         # Initialize dust quantities partly to calculate Sigma
         try:
@@ -347,7 +373,7 @@ class Simulation(dp.Simulation):
         # Floor value
         if self.dust.SigmaFloor is None:
             # TODO: What is a reasonable value for this in TwoPopPy
-            SigmaFloor = 1.e-100 * np.ones(shape2)
+            SigmaFloor = 1.e-100 * np.ones(shape2Sigma)
             self.dust.addfield(
                 "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]")
         # Surface density, if not set
@@ -373,7 +399,7 @@ class Simulation(dp.Simulation):
             self, self.dust.Sigma, description="Previous value of surface density [g/cm²]")
         # The right-hand side of the matrix equation is stored in a hidden field
         self.dust._rhs = Field(self, np.zeros(
-            shape2ravel), description="Right-hand side of matrix equation [g/cm²]")
+            shape2Sigmaravel), description="Right-hand side of matrix equation [g/cm²]")
         # Boundary conditions
         if self.dust.boundary.inner is None:
             self.dust.boundary.inner = dp.utils.Boundary(
