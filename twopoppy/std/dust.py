@@ -5,9 +5,6 @@ import dustpy.constants as c
 from twopoppy.std import dust_f
 
 import numpy as np
-# import scipy.sparse as sp
-
-# from simframe.integration import Scheme
 
 
 def a(sim):
@@ -22,7 +19,7 @@ def a(sim):
     -------
     a : Field
         Particle sizes"""
-    return dust_f.a(sim.dust.s.amin, sim.dust.s.amax, sim.dust.s.aint, sim.dust.xi.calc, sim.grid._Nm_long)
+    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.s.int, sim.dust.xi.calc, sim.grid._Nm_long)
 
 
 def F_adv(sim, Sigma=None):
@@ -175,9 +172,9 @@ def Sigma_initial(sim):
         Initial dust surface density"""
     xi = sim.dust.xi.calc
     xip4 = xi + 4.
-    sint = sim.dust.s.aint
-    smax = sim.dust.s.amax
-    smin = sim.dust.s.amin
+    sint = sim.dust.s.int
+    smax = sim.dust.s.max
+    smin = sim.dust.s.min
 
     # Values for xi != -4
     S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xi+4)
@@ -248,10 +245,10 @@ def xicalc(sim):
     -------
     xicalc : Field
         Calculated exponent of distribution"""
-    return dust_f.xicalc(sim.dust.Sigma, sim.dust.s.amax, sim.dust.s.aint)
+    return dust_f.calculate_xi(sim.dust.Sigma, sim.dust.s.max, sim.dust.s.int)
 
 
-def aint(sim):
+def sint(sim):
     """Function calculates the intermediate particle size.
 
     Parameters
@@ -261,6 +258,6 @@ def aint(sim):
 
     Returns
     -------
-    aint : Field
+    sint : Field
         Intermediate particle size"""
-    return dust_f.aint(sim.dust.s.amin, sim.dust.s.amax)
+    return dust_f.calculate_sint(sim.dust.s.min, sim.dust.s.max)

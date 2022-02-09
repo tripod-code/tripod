@@ -1,64 +1,64 @@
-subroutine a(amin, amax, aint, xicalc, sizes, Nr, Nm)
+subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
   ! Subroutine calculates the particle sizes.
   ! a = [a0, a1, 0.5*amean, amean]
   !
   ! Parameters
   ! ----------
-  ! amin(Nr) : Minimal particle size
-  ! amax(Nr) : Maximum particle size
-  ! aint(Nr) : Intermediate particle size
-  ! xicalc(Nr) : Calculated distribution exponent
+  ! smin(Nr) : Minimal particle size
+  ! smax(Nr) : Maximum particle size
+  ! sint(Nr) : Intermediate particle size
+  ! xi(Nr) : Calculated distribution exponent
   ! Nr : Number of radial grid cells
   ! Nm : Number of mass bins
   !
   ! Returns
   ! -------
-  ! sizes(Nr, Nm) : Particle sizes
+  ! a(Nr, Nm) : Particle sizes
 
   implicit None
 
-  double precision, intent(in)  :: amin(Nr)
-  double precision, intent(in)  :: amax(Nr)
-  double precision, intent(in)  :: aint(Nr)
-  double precision, intent(in)  :: xicalc(Nr)
-  double precision, intent(out) :: sizes(Nr, Nm)
+  double precision, intent(in)  :: smin(Nr)
+  double precision, intent(in)  :: smax(Nr)
+  double precision, intent(in)  :: sint(Nr)
+  double precision, intent(in)  :: xi(Nr)
+  double precision, intent(out) :: a(Nr, Nm)
   integer,          intent(in)  :: Nr
   integer,          intent(in)  :: Nm
 
   integer :: i
 
   do i=1, Nr
-    if(xicalc(i) .eq. -5) then
-      sizes(i, 1) = &
-      aint(i) * amin(i) / ( aint(i) - amin(i) ) * log( aint(i) / amin(i) )
-      sizes(i, 2) = &
-      amax(i) * aint(i) / ( amax(i) - aint(i) ) * log( amax(i) / aint(i) )
-      sizes(i, 4) = &
-      amax(i) * amin(i) / ( amax(i) - amin(i) ) * log( amax(i) / amin(i) )
-      sizes(i, 3) = 0.5d0 * sizes(i, 4)
-    else if(xicalc(i) .eq. -4) then
-      sizes(i, 1) = ( aint(i) - amin(i) ) / log( aint(i) / amin(i) )
-      sizes(i, 2) = ( amax(i) - aint(i) ) / log( amax(i) / aint(i) )
-      sizes(i, 4) = ( amax(i) - amin(i) ) / log( amax(i) / amin(i) )
-      sizes(i, 3) = 0.5d0 * sizes(i, 4)
+    if(xi(i) .eq. -5) then
+      a(i, 1) = &
+      sint(i) * smin(i) / ( sint(i) - smin(i) ) * log( sint(i) / smin(i) )
+      a(i, 2) = &
+      smax(i) * sint(i) / ( smax(i) - sint(i) ) * log( smax(i) / sint(i) )
+      a(i, 4) = &
+      smax(i) * smin(i) / ( smax(i) - smin(i) ) * log( smax(i) / smin(i) )
+      a(i, 3) = 0.5d0 * a(i, 4)
+    else if(xi(i) .eq. -4) then
+      a(i, 1) = ( sint(i) - smin(i) ) / log( sint(i) / smin(i) )
+      a(i, 2) = ( smax(i) - sint(i) ) / log( smax(i) / sint(i) )
+      a(i, 4) = ( smax(i) - smin(i) ) / log( smax(i) / smin(i) )
+      a(i, 3) = 0.5d0 * a(i, 4)
     else
-      sizes(i, 1) = &
-      ( xicalc(i) + 4.d0 ) / ( xicalc(i) + 5.d0 ) * ( aint(i)**( xicalc(i) + 5.d0 ) -&
-      amin(i)**( xicalc(i) + 5.d0) ) / ( aint(i)**( xicalc(i) + 4.d0 ) - amin(i)&
-      **( xicalc(i) + 4.d0) )
-      sizes(i, 2) = &
-      ( xicalc(i) + 4.d0 ) / ( xicalc(i) + 5.d0 ) * ( amax(i)**( xicalc(i) + 5.d0 ) -&
-      aint(i)**( xicalc(i) + 5.d0) ) / ( amax(i)**( xicalc(i) + 4.d0 ) - aint(i)&
-      **( xicalc(i) + 4.d0) )
-      sizes(i, 4) = &
-      ( xicalc(i) + 4.d0 ) / ( xicalc(i) + 5.d0 ) * ( amax(i)**( xicalc(i) + 5.d0 ) -&
-      amin(i)**( xicalc(i) + 5.d0) ) / ( amax(i)**( xicalc(i) + 4.d0 ) - amin(i)&
-      **( xicalc(i) + 4.d0) )
-      sizes(i, 3) = 0.5d0 * sizes(i, 4)
+      a(i, 1) = &
+      ( xi(i) + 4.d0 ) / ( xi(i) + 5.d0 ) * ( sint(i)**( xi(i) + 5.d0 ) -&
+      smin(i)**( xi(i) + 5.d0) ) / ( sint(i)**( xi(i) + 4.d0 ) - smin(i)&
+      **( xi(i) + 4.d0) )
+      a(i, 2) = &
+      ( xi(i) + 4.d0 ) / ( xi(i) + 5.d0 ) * ( smax(i)**( xi(i) + 5.d0 ) -&
+      sint(i)**( xi(i) + 5.d0) ) / ( smax(i)**( xi(i) + 4.d0 ) - sint(i)&
+      **( xi(i) + 4.d0) )
+      a(i, 4) = &
+      ( xi(i) + 4.d0 ) / ( xi(i) + 5.d0 ) * ( smax(i)**( xi(i) + 5.d0 ) -&
+      smin(i)**( xi(i) + 5.d0) ) / ( smax(i)**( xi(i) + 4.d0 ) - smin(i)&
+      **( xi(i) + 4.d0) )
+      a(i, 3) = 0.5d0 * a(i, 4)
     end if
   end do
 
-end subroutine a
+end subroutine calculate_a
 
 
 subroutine fi_adv(Sigma, v, r, ri, Fi, Nr, Nm_s, Nm_l)
@@ -324,14 +324,14 @@ subroutine vrel_brownian_motion(cs, m, T, vrel, Nr, Nm)
 end subroutine vrel_brownian_motion
 
 
-subroutine xicalc(Sigma, amax, aint, xi, Nr, Nm)
+subroutine calculate_xi(Sigma, smax, sint, xi, Nr, Nm)
   ! Subroutine calculates the particle size distribution exponent.
   !
   ! Parameters
   ! ----------
   ! Sigma (Nr, Nm) : Dust surface density
-  ! amax(Nr) : Maximum particle size
-  ! aint(Nr) : Intermediate particle size
+  ! smax(Nr) : Maximum particle size
+  ! sint(Nr) : Intermediate particle size
   ! Nr : Number or radial grid cells
   ! Nm : Number of mass bins
   !
@@ -342,8 +342,8 @@ subroutine xicalc(Sigma, amax, aint, xi, Nr, Nm)
   implicit none
 
   double precision, intent(in)  :: Sigma(Nr, Nm)
-  double precision, intent(in)  :: amax(Nr)
-  double precision, intent(in)  :: aint(Nr)
+  double precision, intent(in)  :: smax(Nr)
+  double precision, intent(in)  :: sint(Nr)
   double precision, intent(out) :: xi(Nr)
   integer,          intent(in)  :: Nr
   integer,          intent(in)  :: Nm
@@ -351,34 +351,32 @@ subroutine xicalc(Sigma, amax, aint, xi, Nr, Nm)
   integer :: i
 
   do i=1, Nr
-    xi(i) = log( Sigma(i, 1) / Sigma(i, 2) ) / log( amax(i) / aint(i) ) - 4.d0
+    xi(i) = log( Sigma(i, 1) / Sigma(i, 2) ) / log( smax(i) / sint(i) ) - 4.d0
   end do
 
-end subroutine xicalc
+end subroutine calculate_xi
 
 
-subroutine aint(amin, amax, intsize, Nr)
+subroutine calculate_sint(smin, smax, sint, Nr)
   ! Subroutine calculates the intermediate particle size.
   !
   ! Parameters
   ! ----------
-  ! amin(Nr) : Minimum particle size
-  ! amax(Nr) : Maximum particle size
+  ! smin(Nr) : Minimum particle size
+  ! smax(Nr) : Maximum particle size
   ! Nr : Number or radial grid cells
   !
   ! Returns
   ! -------
-  ! intsize(Nr) : Intermediate particle size
+  ! sint(Nr) : Intermediate particle size
 
   implicit none
 
-  double precision, intent(in)  :: amin(Nr)
-  double precision, intent(in)  :: amax(Nr)
-  double precision, intent(out) :: intsize(Nr)
+  double precision, intent(in)  :: smin(Nr)
+  double precision, intent(in)  :: smax(Nr)
+  double precision, intent(out) :: sint(Nr)
   integer,          intent(in)  :: Nr
 
-  double precision :: onehalf = 1.d0/2.d0
+  sint = sqrt( smin * smax )
 
-  intsize = ( amin * amax )**onehalf
-
-end subroutine aint
+end subroutine calculate_sint

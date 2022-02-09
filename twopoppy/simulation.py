@@ -27,10 +27,10 @@ class Simulation(dp.Simulation):
         self.dust.xi.stick = None
         self.dust.xi.updater = ["calc"]
         self.dust.addgroup("s", description="Specific particle sizes")
-        self.dust.s.amin = None
-        self.dust.s.amax = None
-        self.dust.s.aint = None
-        self.dust.s.updater = ["aint"]
+        self.dust.s.min = None
+        self.dust.s.max = None
+        self.dust.s.int = None
+        self.dust.s.updater = ["int"]
 
         # Adjusting the updater
         updtordr = self.dust.updateorder
@@ -356,19 +356,19 @@ class Simulation(dp.Simulation):
             self.dust.xi.addfield(
                 "stick", xistick, description="Drift distribution exponent")
         # Specific particle sizes
-        if self.dust.s.amin is None:
-            amin = 0.1 * self.ini.dust.aIniMax * np.ones(shape1)
+        if self.dust.s.min is None:
+            smin = 0.1 * self.ini.dust.aIniMax * np.ones(shape1)
             self.dust.s.addfield(
-                "amin", amin, description="Minimum particle size")
-        if self.dust.s.amax is None:
-            amax = self.ini.dust.aIniMax * np.ones(shape1)
+                "min", smin, description="Minimum particle size")
+        if self.dust.s.max is None:
+            smax = self.ini.dust.aIniMax * np.ones(shape1)
             self.dust.s.addfield(
-                "amax", amax, description="Maximum particle size")
-        if self.dust.s.aint is None:
-            aint = np.sqrt(0.1) * self.ini.dust.aIniMax * np.ones(shape1)
+                "max", smax, description="Maximum particle size")
+        if self.dust.s.int is None:
+            sint = np.sqrt(0.1) * self.ini.dust.aIniMax * np.ones(shape1)
             self.dust.s.addfield(
-                "aint", aint, description="Intermediate particle size")
-            self.dust.s.aint.updater = std.dust.aint
+                "int", sint, description="Intermediate particle size")
+            self.dust.s.int.updater = std.dust.sint
 
         # Initialize dust quantities partly to calculate Sigma
         try:
