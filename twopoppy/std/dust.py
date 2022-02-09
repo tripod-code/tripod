@@ -177,7 +177,7 @@ def Sigma_initial(sim):
     smin = sim.dust.s.min
 
     # Values for xi != -4
-    S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xi+4)
+    S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xip4)
     S1 = 1. - S0
     S = np.array([S0, S1]).T
 

@@ -28,7 +28,7 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
   integer :: i
 
   do i=1, Nr
-    if(xi(i) .eq. -5) then
+    if(xi(i) .eq. -5.d0) then
       a(i, 1) = &
       sint(i) * smin(i) / ( sint(i) - smin(i) ) * log( sint(i) / smin(i) )
       a(i, 2) = &
@@ -36,7 +36,7 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
       a(i, 4) = &
       smax(i) * smin(i) / ( smax(i) - smin(i) ) * log( smax(i) / smin(i) )
       a(i, 3) = 0.5d0 * a(i, 4)
-    else if(xi(i) .eq. -4) then
+    else if(xi(i) .eq. -4.d0) then
       a(i, 1) = ( sint(i) - smin(i) ) / log( sint(i) / smin(i) )
       a(i, 2) = ( smax(i) - sint(i) ) / log( smax(i) / sint(i) )
       a(i, 4) = ( smax(i) - smin(i) ) / log( smax(i) / smin(i) )
@@ -351,7 +351,7 @@ subroutine calculate_xi(Sigma, smax, sint, xi, Nr, Nm)
   integer :: i
 
   do i=1, Nr
-    xi(i) = log( Sigma(i, 1) / Sigma(i, 2) ) / log( smax(i) / sint(i) ) - 4.d0
+    xi(i) = log( Sigma(i, 2) / Sigma(i, 1) ) / log( smax(i) / sint(i) ) - 4.d0
   end do
 
 end subroutine calculate_xi
