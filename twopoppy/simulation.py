@@ -32,17 +32,23 @@ class Simulation(dp.Simulation):
         self.dust.s.aint = None
         self.dust.s.updater = ["aint"]
 
+        # Adjusting the updater
+        updtordr = self.dust.updateorder
+
         # Adding new elements to update order in a relative way
         def addelemtafter(lst, elem, after):
             idx = lst.index(after)
             lst.insert(idx+1, elem)
-        updtordr = self.dust.updateorder
         # Add "s" after "fill"
         addelemtafter(updtordr, "s", "fill")
         # Add "xi" after "s"
         addelemtafter(updtordr, "xi", "s")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
+
+        # Removing elements that are not used
+        updtordr.remove("kernel")
+
         # Assign updateorder
         self.dust.updater = updtordr
 
@@ -266,7 +272,7 @@ class Simulation(dp.Simulation):
         # Midplane mass density
         if self.dust.rho is None:
             self.dust.addfield(
-                "rho", np.zeros(shape2), description="Midplane mass density per mass bin [g/cm³]")
+                "rho", np.zeros(shape2Sigma), description="Midplane mass density per mass bin [g/cm³]")
             self.dust.rho.updater = std.dust.rho_midplane
         # Solid state density
         if self.dust.rhos is None:
