@@ -344,8 +344,9 @@ class Simulation(dp.Simulation):
             self.dust.v.rad.updater = dp.std.dust.vrad
         # Distribution exponents
         if self.dust.xi.calc is None:
+            xi = self.ini.dust.distExp * np.ones(shape1)
             self.dust.xi.addfield(
-                "calc", np.zeros(shape1), description="Calculated distribution exponent")
+                "calc", xi, description="Calculated distribution exponent")
             self.dust.xi.calc.updater = std.dust.xicalc
         if self.dust.xi.frag is None:
             xifrag = self.ini.dust.distExp * np.ones(shape1)
@@ -369,12 +370,6 @@ class Simulation(dp.Simulation):
             self.dust.s.addfield(
                 "int", sint, description="Intermediate particle size")
             self.dust.s.int.updater = std.dust.sint
-
-        # Initialize dust quantities partly to calculate Sigma
-        try:
-            self.dust.update()
-        except Exception:
-            pass
 
         # Floor value
         if self.dust.SigmaFloor is None:
