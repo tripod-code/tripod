@@ -425,7 +425,7 @@ class Simulation(dp.Simulation):
         # Floor value
         if self.dust.SigmaFloor is None:
             # TODO: What is a reasonable value for this in TwoPopPy
-            SigmaFloor = 1.e-100 * np.ones(shape2Sigma)
+            SigmaFloor = 0.1 * std.dust.SigmaFloor(self)
             self.dust.addfield(
                 "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]"
             )

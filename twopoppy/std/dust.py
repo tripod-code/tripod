@@ -399,6 +399,23 @@ def S_coag(sim, Sigma=None):
     return Scoag
 
 
+def SigmaFloor(sim):
+    """Function calculates the floor value for the dust distribution. Floor value means that there is less than
+    one particle in an annulus.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    Sigma_floor : Field
+        Floor value of surface density"""
+    area = c.pi * (sim.grid.ri[1:]**2. - sim.grid.ri[:-1]**2.)
+    return sim.dust.m[:, :2] / area[..., None]
+
+
 def jacobian(sim, x, dx=None, *args, **kwargs):
     """Function calculates the Jacobian for implicit dust integration.
 
