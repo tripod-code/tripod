@@ -11,7 +11,7 @@ from . import std
 class Simulation(dp.Simulation):
 
     # Exclude the following functions from the from DustPy inherited object
-    _excludefromparent = [
+    _excludefromdustpy = [
         "checkmassconservation",
         "setdustintegrator"
     ]
@@ -66,22 +66,22 @@ class Simulation(dp.Simulation):
     # I have to check if there is a cleaner way of doing this.
     def __dir__(self):
         '''This function hides all attributes in _excludefromparten from inherited DustPy object. It is only hiding them. They can still be accessed.'''
-        return sorted((set(dir(self.__class__)) | set(self.__dict__.keys())) - set(self._excludefromparent))
+        exclude = set(self._excludefromdustpy) - set(self.__dict__.keys())
+        return sorted((set(dir(self.__class__)) | set(self.__dict__.keys())) - exclude)
 
-    def __getattribute__(self, __name):
-        '''This function raises an attribute error if the hidden attributes are accessed.'''
-        if __name in super(dp.Simulation, self).__getattribute__("_excludefromparent"):
-            raise AttributeError(__name)
-        return super(dp.Simulation, self).__getattribute__(__name)
-
-    def __setattr__(self, name, value):
-        '''This function removes attribute from list of hidden attributes if user manually set is.'''
-        if name in self._excludefromparent:
-            self._excludefromparent.remove(name)
-        return super().__setattr__(name, value)
+    def __getattribute__(self, name):
+        '''This function raises an attribute error for elements that should not be inherited from DustPy if they were not manually set in TwoPopPy.'''
+        in_tp = name in super(
+            dp.Simulation, self).__getattribute__("__dict__")
+        in_dp = name in dp.Simulation.__dict__
+        in_ex = name in name in super(
+            dp.Simulation, self).__getattribute__("_excludefromdustpy")
+        if not in_tp and in_dp and in_ex:
+            raise AttributeError(name)
+        return super(dp.Simulation, self).__getattribute__(name)
 
     def run(self):
-        """This functions runs the simulation."""
+        '''This functions runs the simulation.'''
         # Print welcome message
         if self.verbosity > 0:
             msg = ""
