@@ -3,11 +3,69 @@
 
 import dustpy.constants as c
 from dustpy.std import dust_f as dp_dust_f
+import dustpy.std.dust as dp_dust
 from twopoppy.std import dust_f
 
 import numpy as np
 
 import scipy.sparse as sp
+
+
+def prepare(sim):
+    """Function prepares implicit dust integration step.
+    It stores the current value of the surface density in a hidden field.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame"""
+    # Setting coagulation sources and external sources at boundaries to zero
+    sim.dust.S.coag[0] = 0.
+    sim.dust.S.coag[-1] = 0.
+    sim.dust.S.ext[0] = 0.
+    sim.dust.S.ext[-1] = 0.
+    # Storing current surface density
+    sim.dust._SigmaOld[...] = sim.dust.Sigma[...]
+
+
+def finalize_implicit(sim):
+    """Function finalizes implicit integration step.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent integration frame"""
+    dp_dust.boundary(sim)
+    dp_dust.enforce_floor_value(sim)
+    sim.dust.v.rad.update()
+    sim.dust.Fi.update()
+    sim.dust.S.hyd.update()
+    dp_dust.set_implicit_boundaries(sim)
+
+
+def dt(sim):
+    """Function calculates the time step from the dust sources.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    dt : float
+        Dust time step"""
+    if np.any(sim.dust.S.tot[1:-1, ...] < 0.):
+        mask = np.logical_and(
+            sim.dust.Sigma > sim.dust.SigmaFloor,
+            sim.dust.S.tot < 0.)
+        mask[0, :] = False
+        mask[-1:, :] = False
+        rate = sim.dust.Sigma[mask] / sim.dust.S.tot[mask]
+        try:
+            return np.min(np.abs(rate))
+        except:
+            return None
 
 
 def a(sim):
@@ -295,21 +353,25 @@ def sint(sim):
     return dust_f.calculate_sint(sim.dust.s.min, sim.dust.s.max)
 
 
-def S_coag(sim):
+def S_coag(sim, Sigma=None):
     '''Function calculates the source terms from dust growth
 
     Parameters
     ----------
     sim : Frame
         Parent simulation frame
+    Sigma : Field, optional, default : None
+        Surface density to be used if not None
 
     Returns
     -------
     Scoag : Field
         Source terms from dust growth'''
+    if Sigma is None:
+        Sigma = sim.dust.Sigma
+
     # Helper variables
     sigma = np.pi * (sim.dust.a[:, :, None]**2 + sim.dust.a[:, None, :]**2)
-    Sigma = sim.dust.Sigma
     H = sim.dust.H
     dv = sim.dust.v.rel.tot
     m = sim.dust.m

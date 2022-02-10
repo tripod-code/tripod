@@ -33,33 +33,40 @@ class Simulation(dp.Simulation):
         self.dust.s.int = None
         self.dust.s.updater = ["int"]
 
-        # Adjusting the updater
-        updtordr = self.dust.updateorder
+        # Adjusting update orders
 
         # Adding new elements to update order in a relative way
         def addelemtafter(lst, elem, after):
             idx = lst.index(after)
             lst.insert(idx+1, elem)
+
+        # Adjusting the updater of main simulation frame
+        updtordr = self.dust.updateorder
         # Add "s" after "fill"
         addelemtafter(updtordr, "s", "fill")
         # Add "xi" after "s"
         addelemtafter(updtordr, "xi", "s")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
-
         # Removing elements that are not used
         updtordr.remove("kernel")
-
         # Assign updateorder
         self.dust.updater = updtordr
 
-        # TODO: Managing the self.ini object
+        # Adjusting the updater of dust sources
+        updtordr = self.dust.S.updateorder
+        # Add "s" after "fill"
+        addelemtafter(updtordr, "coag", "ext")
+        # Assign updateorder
+        self.dust.S.updater = updtordr
 
         # Deleting Fields that are not needed
         del(self.dust.coagulation)
         del(self.dust.kernel)
         del(self.grid.m)
         del(self.grid.Nm)
+
+        # TODO: Managing the self.ini object
 
     # Note: the next two functions are to hide methods from DustPy that are not used in TwoPopPy
     def __dir__(self):
@@ -175,12 +182,12 @@ class Simulation(dp.Simulation):
                 # If we need to use the new smax for the dust integration
                 # uncomment the following instruction
                 # Instruction(schemes.update, self.dust.s.max),
-                # Instruction(
-                #    dp.std.dust.impl_1_direct,
-                #    self.dust.Sigma,
-                #    controller={"rhs": self.dust._rhs},
-                #    description="Dust: implicit 1st-order direct solver"
-                # ),
+                Instruction(
+                    dp.std.dust.impl_1_direct,
+                    self.dust.Sigma,
+                    controller={"rhs": self.dust._rhs},
+                    description="Dust: implicit 1st-order direct solver"
+                ),
                 Instruction(
                     dp.std.gas.impl_1_direct,
                     self.gas.Sigma,
@@ -191,9 +198,8 @@ class Simulation(dp.Simulation):
             self.integrator = Integrator(
                 self.t, description="Default integrator")
             self.integrator.instructions = instructions
-            # TODO: Add preparator and finalizer?
-            # self.integrator.preparator = dp.std.sim.prepare_implicit_dust
-            # self.integrator.finalizer = dp.std.sim.finalize_implicit_dust
+            self.integrator.preparator = std.sim.prepare_implicit_dust
+            self.integrator.finalizer = std.sim.finalize_implicit_dust
 
         # Set writer
         if self.writer is None:
