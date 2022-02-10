@@ -446,7 +446,7 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
 
     # Building the hydrodynamic Jacobian
     # TODO: Check this call
-    A, B, C = dp.std.dust_f.jacobian_hydrodynamic_generator(
+    A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
         area,
         sim.dust.D[:, :2],
         r,
