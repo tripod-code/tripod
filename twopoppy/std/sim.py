@@ -20,8 +20,8 @@ def dt(sim):
         Time step"""
 
     dt_gas = dp_std.gas.dt(sim) or 1.e100
-    dt_dust = st.dust.dt(sim) or 1.e100
-    dt_part = st.dust.dt_smax(sim) or 1.e100
+    dt_dust = std.dust.dt(sim) or 1.e100
+    dt_part = std.dust.dt_smax(sim) or 1.e100
     dt = np.minimum(dt_gas, np.minimum(dt_dust, dt_part))
     return sim.t.cfl * dt
 
