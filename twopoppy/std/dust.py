@@ -83,7 +83,7 @@ def dt_smax(sim):
         Particle growth time step"""
     # TODO: Which factor for maximum growth makes sense here?
     max_growth_fact = 10.
-    smax_dot = std.dust.smax_deriv(sim, sim.t, sim.s.max)
+    smax_dot = smax_deriv(sim, sim.t, sim.s.max)
     mask1 = np.where(smax_dot < 0.)
     rate1 = (sim.dust.s.min[mask1] - sim.dust.max[mask1]) / smax_dot[mask1]
     mask2 = np.where(smax_dot > 0.)
@@ -328,7 +328,7 @@ def S_tot(sim, Sigma=None):
         Scoag = sim.dust.S.coag
         Shyd = sim.dust.S.hyd
     else:
-         Scoag = sim.dust.S.coag.updater.beat(sim, Sigma=Sigma)
+        Scoag = sim.dust.S.coag.updater.beat(sim, Sigma=Sigma)
         if Scoag is None:
             Scoag = sim.dust.S.coag
         Shyd = sim.dust.S.hyd.updater.beat(sim, Sigma=Sigma)
