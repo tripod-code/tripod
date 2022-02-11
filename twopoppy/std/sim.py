@@ -21,8 +21,7 @@ def dt(sim):
 
     dt_gas = dp_std.gas.dt(sim) or 1.e100
     dt_dust = std.dust.dt(sim) or 1.e100
-    dt_part = std.dust.dt_smax(sim) or 1.e100
-    dt = np.minimum(dt_gas, np.minimum(dt_dust, dt_part))
+    dt = np.minimum(dt_gas, dt_dust)
     return sim.t.cfl * dt
 
 

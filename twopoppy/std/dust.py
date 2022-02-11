@@ -55,17 +55,32 @@ def dt(sim):
     -------
     dt : float
         Dust time step"""
+    dtSigma = dt_Sigma(sim)
+    dtsmax = dt_smax(sim)
+    return np.minimum(dtSigma, dtsmax)
+
+
+def dt_Sigma(sim):
+    """Function calculates the time step dues to changes in Sigma.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    dt_Sigma : float
+        Time step due to changes in Sigma"""
     if np.any(sim.dust.S.tot[1:-1, ...] < 0.):
         mask = np.logical_and(
             sim.dust.Sigma > sim.dust.SigmaFloor,
             sim.dust.S.tot < 0.)
         mask[0, :] = False
         mask[-1:, :] = False
-        rate = sim.dust.Sigma[mask] / sim.dust.S.tot[mask]
-        try:
-            return np.min(np.abs(rate))
-        except:
-            return None
+        dt = sim.dust.Sigma[mask] / sim.dust.S.tot[mask]
+        return np.min(np.abs(dt))
+    return 1.e100
 
 
 def dt_smax(sim):
@@ -86,12 +101,11 @@ def dt_smax(sim):
     smax_dot = sim.dust.s.max.derivative()
     mask1 = np.where(smax_dot < 0.)
     rate1 = (sim.dust.s.min[mask1] - sim.dust.s.max[mask1]) / smax_dot[mask1]
+    dt1 = np.min(np.abs(rate1))
     mask2 = np.where(smax_dot > 0.)
     rate2 = (max_growth_fact - 1.) * sim.dust.s.max[mask2] / smax_dot[mask2]
-    try:
-        return np.minimum(np.abs(rate1), np.abs(rate2))
-    except:
-        return None
+    dt2 = np.min(np.abs(rate2))
+    return np.minimum(dt1, dt2)
 
 
 def a(sim):
