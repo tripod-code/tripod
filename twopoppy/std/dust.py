@@ -98,7 +98,7 @@ def dt_smax(sim):
         Particle growth time step"""
     # TODO: Which factor for maximum growth makes sense here?
     max_growth_fact = 10.
-    smax_dot = sim.dust.s.max.derivative()
+    smax_dot = sim.dust.s.max.derivative()[1:-1]  # Ignoring boundaries
     # Time step if smax is shrinking.
     # Value must not drop below smin
     if np.any(smax_dot < 0.):
