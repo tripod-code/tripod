@@ -68,6 +68,32 @@ def dt(sim):
             return None
 
 
+def dt_smax(sim):
+    """Function calculates the time step from the particle growth.
+    Growth of maximum particle size during one integration step bound by smin and maximum growth factor.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    dt_smax : float
+        Particle growth time step"""
+    # TODO: Which factor for maximum growth makes sense here?
+    max_growth_fact = 10.
+    smax_dot = std.dust.smax_deriv(sim, sim.t, sim.s.max)
+    mask1 = np.where(smax_dot < 0.)
+    rate1 = (sim.dust.s.min[mask1] - sim.dust.max[mask1]) / smax_dot[mask1]
+    mask2 = np.where(smax_dot > 0.)
+    rate2 = (max_growth_fact - 1.) * sim.dust.s.max[mask2] / smax_dot[mask2]
+    try:
+        return np.minimum(np.abs(rate1), np.abs(rate2))
+    except:
+        return None
+
+
 def a(sim):
     """Function calculates the particle size from the specific particle sizes and the distribution exponent.
 
@@ -299,12 +325,16 @@ def S_tot(sim, Sigma=None):
     Sext = sim.dust.S.ext
     if Sigma is None:
         Sigma = sim.dust.Sigma
+        Scoag = sim.dust.S.coag
         Shyd = sim.dust.S.hyd
     else:
+         Scoag = sim.dust.S.coag.updater.beat(sim, Sigma=Sigma)
+        if Scoag is None:
+            Scoag = sim.dust.S.coag
         Shyd = sim.dust.S.hyd.updater.beat(sim, Sigma=Sigma)
         if Shyd is None:
             Shyd = sim.dust.S.hyd
-    return Shyd + Sext
+    return Scoag + Shyd + Sext
 
 
 def vrel_brownian_motion(sim):
@@ -385,7 +415,7 @@ def S_coag(sim, Sigma=None):
     xiprime = pfrag*xifrag[:, None, None] + pstick*xistick[:, None, None]
     F = np.sqrt(2.*H[:, 1]**2 / (H[:, 0]**2 + H[:, 1]**2)) \
         * sigma[:, 0, 1]/sigma[:, 1, 1] * dv[:, 0, 1]/dv[:, 1, 1] \
-        * (smax/sint)**(-xiprime[:, 0, 1]-4.)
+        * (smax/sint)**(-xiprime[:, 1, 1]-4.)
 
     dot01 = Sigma[:, 0] * Sigma[:, 1] * sigma[:, 0, 1] * dv[:, 0, 1] \
         / (sim.dust.m[:, 1] * np.sqrt(2 * np.pi * (H[:, 0]**2 + H[:, 1]**2)))
