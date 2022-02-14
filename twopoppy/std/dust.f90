@@ -26,37 +26,39 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
   integer,          intent(in)  :: Nm
 
   integer :: i
+  double precision :: xip4(Nr)
+  double precision :: xip5(Nr)
+  double precision :: R(Nr)
+
+  xip4(:) = xi(:) + 4.d0
+  xip5(:) = xi(:) + 5.d0
+  R(:) = xip4(:) / xip5(:)
 
   do i=1, Nr
+
     if(xi(i) .eq. -5.d0) then
-      a(i, 1) = &
-      sint(i) * smin(i) / ( sint(i) - smin(i) ) * log( sint(i) / smin(i) )
-      a(i, 2) = &
-      smax(i) * sint(i) / ( smax(i) - sint(i) ) * log( smax(i) / sint(i) )
-      a(i, 4) = &
-      smax(i) * smin(i) / ( smax(i) - smin(i) ) * log( smax(i) / smin(i) )
-      a(i, 3) = 0.5d0 * a(i, 4)
+
+      a(i, 1) = sint(i) * smin(i) / ( sint(i) - smin(i) ) * log( sint(i) / smin(i) )
+      a(i, 2) = smax(i) * sint(i) / ( smax(i) - sint(i) ) * log( smax(i) / sint(i) )
+      a(i, 4) = smax(i) * smin(i) / ( smax(i) - smin(i) ) * log( smax(i) / smin(i) )
+
     else if(xi(i) .eq. -4.d0) then
+
       a(i, 1) = ( sint(i) - smin(i) ) / log( sint(i) / smin(i) )
       a(i, 2) = ( smax(i) - sint(i) ) / log( smax(i) / sint(i) )
       a(i, 4) = ( smax(i) - smin(i) ) / log( smax(i) / smin(i) )
-      a(i, 3) = 0.5d0 * a(i, 4)
+
     else
-      a(i, 1) = &
-      ( xi(i) + 4.d0 ) / ( xi(i) + 5.d0 ) * ( sint(i)**( xi(i) + 5.d0 ) -&
-      smin(i)**( xi(i) + 5.d0) ) / ( sint(i)**( xi(i) + 4.d0 ) - smin(i)&
-      **( xi(i) + 4.d0) )
-      a(i, 2) = &
-      ( xi(i) + 4.d0 ) / ( xi(i) + 5.d0 ) * ( smax(i)**( xi(i) + 5.d0 ) -&
-      sint(i)**( xi(i) + 5.d0) ) / ( smax(i)**( xi(i) + 4.d0 ) - sint(i)&
-      **( xi(i) + 4.d0) )
-      a(i, 4) = &
-      ( xi(i) + 4.d0 ) / ( xi(i) + 5.d0 ) * ( smax(i)**( xi(i) + 5.d0 ) -&
-      smin(i)**( xi(i) + 5.d0) ) / ( smax(i)**( xi(i) + 4.d0 ) - smin(i)&
-      **( xi(i) + 4.d0) )
-      a(i, 3) = 0.5d0 * a(i, 4)
+
+      a(i, 1) = R(i) * ( sint(i)**xip5(i) - smin(i)**xip5(i) ) / ( sint(i)**xip4(i) - smin(i)**xip4(i) )
+      a(i, 2) = R(i) * ( smax(i)**xip5(i) - sint(i)**xip5(i) ) / ( smax(i)**xip4(i) - sint(i)**xip4(i) )
+      a(i, 4) = R(i) * ( smax(i)**xip5(i) - smin(i)**xip5(i) ) / ( smax(i)**xip4(i) - smin(i)**xip4(i) )
+
     end if
+    
   end do
+
+  a(:, 3) = 0.5d0 * a(:, 4)
 
 end subroutine calculate_a
 
@@ -322,61 +324,3 @@ subroutine vrel_brownian_motion(cs, m, T, vrel, Nr, Nm)
   end do
 
 end subroutine vrel_brownian_motion
-
-
-subroutine calculate_xi(Sigma, smax, sint, xi, Nr, Nm)
-  ! Subroutine calculates the particle size distribution exponent.
-  !
-  ! Parameters
-  ! ----------
-  ! Sigma (Nr, Nm) : Dust surface density
-  ! smax(Nr) : Maximum particle size
-  ! sint(Nr) : Intermediate particle size
-  ! Nr : Number or radial grid cells
-  ! Nm : Number of mass bins
-  !
-  ! Returns
-  ! -------
-  ! xi(Nr) : Calculated distribution exponent
-
-  implicit none
-
-  double precision, intent(in)  :: Sigma(Nr, Nm)
-  double precision, intent(in)  :: smax(Nr)
-  double precision, intent(in)  :: sint(Nr)
-  double precision, intent(out) :: xi(Nr)
-  integer,          intent(in)  :: Nr
-  integer,          intent(in)  :: Nm
-
-  integer :: i
-
-  do i=1, Nr
-    xi(i) = log( Sigma(i, 2) / Sigma(i, 1) ) / log( smax(i) / sint(i) ) - 4.d0
-  end do
-
-end subroutine calculate_xi
-
-
-subroutine calculate_sint(smin, smax, sint, Nr)
-  ! Subroutine calculates the intermediate particle size.
-  !
-  ! Parameters
-  ! ----------
-  ! smin(Nr) : Minimum particle size
-  ! smax(Nr) : Maximum particle size
-  ! Nr : Number or radial grid cells
-  !
-  ! Returns
-  ! -------
-  ! sint(Nr) : Intermediate particle size
-
-  implicit none
-
-  double precision, intent(in)  :: smin(Nr)
-  double precision, intent(in)  :: smax(Nr)
-  double precision, intent(out) :: sint(Nr)
-  integer,          intent(in)  :: Nr
-
-  sint = sqrt( smin * smax )
-
-end subroutine calculate_sint

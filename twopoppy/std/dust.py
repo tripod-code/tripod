@@ -326,7 +326,8 @@ def smax_deriv(sim, t, smax):
         Derivative of smax"""
     vfrag = sim.dust.v.frag
     dv = sim.dust.v.rel.tot[:, 2, 3]
-    A = (vfrag / dv)**8.
+    factor = 8.
+    A = (vfrag / dv)**factor
     B = (1.-A) / (1.+A)
 
     rho = sim.dust.rho[:, :2]
@@ -394,7 +395,7 @@ def xicalc(sim):
     -------
     xicalc : Field
         Calculated exponent of distribution"""
-    return dust_f.calculate_xi(sim.dust.Sigma, sim.dust.s.max, sim.dust.s.int)
+    return np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0]) / np.log10(sim.dust.s.max / sim.dust.s.int) - 4.
 
 
 def sint(sim):
@@ -409,7 +410,7 @@ def sint(sim):
     -------
     sint : Field
         Intermediate particle size"""
-    return dust_f.calculate_sint(sim.dust.s.min, sim.dust.s.max)
+    return np.sqrt(sim.dust.s.min * sim.dust.s.max)
 
 
 def S_coag(sim, Sigma=None):
@@ -441,13 +442,39 @@ def S_coag(sim, Sigma=None):
     pfrag = sim.dust.p.frag
     pstick = sim.dust.p.stick
 
+    #nan = False
+
+    # if (H == 0.).any():
+    #    print("H")
+    #    nan = True
+
+    # if (sigma == 0.).any():
+    #    print("sigma")
+    #    nan = True
+
+    # if (dv == 0.).any():
+    #    print("dv")
+    #    nan = True
+
+    # if (m == 0.).any():
+    #    print("m")
+    #    nan = True
+
+    # if (sint == 0.).any():
+    #    print("sint")
+    #    nan = True
+
+    # if nan:
+    #    import sys
+    #    sys.exit()
+
     xiprime = pfrag*xifrag[:, None, None] + pstick*xistick[:, None, None]
-    F = np.sqrt(2.*H[:, 1]**2 / (H[:, 0]**2 + H[:, 1]**2)) \
+    F = H[:, 1] * np.sqrt(2. / (H[:, 0]**2 + H[:, 1]**2)) \
         * sigma[:, 0, 1]/sigma[:, 1, 1] * dv[:, 0, 1]/dv[:, 1, 1] \
         * (smax/sint)**(-xiprime[:, 1, 1]-4.)
 
     dot01 = Sigma[:, 0] * Sigma[:, 1] * sigma[:, 0, 1] * dv[:, 0, 1] \
-        / (sim.dust.m[:, 1] * np.sqrt(2 * np.pi * (H[:, 0]**2 + H[:, 1]**2)))
+        / (sim.dust.m[:, 1] * np.sqrt(2. * np.pi * (H[:, 0]**2 + H[:, 1]**2)))
     dot10 = Sigma[:, 1]**2 * sigma[:, 1, 1] * dv[:, 1, 1] * F \
         / (2. * np.sqrt(np.pi) * m[:, 1] * H[:, 1])
 
