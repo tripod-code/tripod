@@ -17,7 +17,7 @@ class Simulation(dp.Simulation):
     For initialization use ``Simulation.initialize()``,
     For running simulations use ``Simulation.run()``.
     Please have a look at the documentation of ``simframe`` for further details."""
-    
+
     __name__ = "TwoPopPy"
 
     # Exclude the following functions from the from DustPy inherited object

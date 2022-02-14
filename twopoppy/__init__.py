@@ -12,12 +12,9 @@ that contains pre-defined standard functions ``twopoppy.std`` that can be used i
 ``TwoPopPy`` is using the ``simframe`` package for setting up scientific simulations.'''
 
 from dustpy import constants
-from twopoppy.simulation import Simulation
-from dustpy import utils
-from dustpy.utils import hdf5writer
-
 from simframe.io.dump import readdump
-from simframe.io.writers import hdf5writer
+from twopoppy.simulation import Simulation
+from twopoppy.utils import hdf5writer
 
 __name__ = "twopoppy"
 __version__ = "3.0.0"

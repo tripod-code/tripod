@@ -41,6 +41,9 @@ def finalize_implicit(sim):
     sim.dust.Fi.update()
     sim.dust.S.hyd.update()
     dp_dust.set_implicit_boundaries(sim)
+    # TODO: Doing this here for testing for now
+    sim.dust.s.max[0] = sim.dust.s.max[1]
+    sim.dust.s.max[-1] = sim.dust.s.max[-2]
 
 
 def dt(sim):
@@ -97,7 +100,7 @@ def dt_smax(sim):
     dt_smax : float
         Particle growth time step"""
     # TODO: Which factor for maximum growth makes sense here?
-    max_growth_fact = 10.
+    max_growth_fact = 2.
     smax_dot = sim.dust.s.max.derivative()[1:-1]  # Ignoring boundaries
     # Time step if smax is shrinking.
     # Value must not drop below smin
