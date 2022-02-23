@@ -535,7 +535,7 @@ def _readdata(data, filename="data", extension="hdf5"):
     mi1 = mi[..., 1:]
     mic = 0.5 * (mi0[...] + mi1[...])
     SigmaDustTot = SigmaDust[...].sum(-1)
-    SigmaDusti = np.ones(int(Nt), int(Nr), int(Nmi-1)) * 1e-100
+    SigmaDustint = np.ones(int(Nt), int(Nr), int(Nmi-1)) * 1e-100
     for i in range(Nt):
         i = int(i)
         for j in range(Nr):
@@ -545,20 +545,20 @@ def _readdata(data, filename="data", extension="hdf5"):
                 if mi1[k] <= smax[i, j]:
                     if xicalc[i, j] != -4.:
                         expo = (xicalc[i, j]+4.) / 3.
-                        SigmaDusti[i, j, k] = SigmaDustTot[i, j] * \\
-                        (mi1[k]**expo - mi0[k]**expo) / \\
+                        SigmaDustint[i, j, k] = SigmaDustTot[i, j] * \
+                        (mi1[k]**expo - mi0[k]**expo) / \
                         (smax[i, j]**expo - smin[i, j]**expo)
                     else:
-                        SigmaDusti[i, j, k] = SigmaDustTot[i, j] * \\
-                        np.log(mi1[k] / mi0[k]) / \\
+                        SigmaDustint[i, j, k] = SigmaDustTot[i, j] * \
+                        np.log(mi1[k] / mi0[k]) / \
                         np.log(smax[i, j] / smin[i, j])
     Nmi = np.ones(Nt) * Nmi
 
     # Transformation of the density distribution
     a = np.array(np.mean(mic[..., 1:] / mic[..., :-1], axis=-1))
     dm = np.array(2. * (a - 1.) / (a + 1.))
-    SigmaDusti = SigmaDusti[...] / dm[..., None, None]
-    
+    SigmaDusti = SigmaDustint[...] / dm[..., None, None]
+
     # Calculation of Stokes Number over mass grid
     rho = rhos * fill
     ai = 3 / (4 * np.pi * rho) * mic[...]**(1/3)
@@ -613,6 +613,7 @@ def _readdata(data, filename="data", extension="hdf5"):
     ret["xicalc"] = xicalc
 
     ret["SigmaDustTot"] = SigmaDustTot
+    ret["SigmaDustint"] = SigmaDustint
     ret["SigmaDusti"] = SigmaDusti
     ret["mic"] = mic
     ret["Nmi"] = Nmi
