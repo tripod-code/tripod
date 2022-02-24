@@ -42,8 +42,23 @@ def finalize_implicit(sim):
     sim.dust.S.hyd.update()
     dp_dust.set_implicit_boundaries(sim)
     # TODO: Doing this here for testing for now
+    # This boundary condition keeps smax constant
     sim.dust.s.max[0] = sim.dust.s.max[1]
     sim.dust.s.max[-1] = sim.dust.s.max[-2]
+    # This boundary condition keeps xi constant
+    # xip4 = 2. * np.log(sim.dust.Sigma[1, 1]/sim.dust.Sigma[1, 0]) / \
+    #    np.log(sim.dust.s.max[1]/sim.dust.s.min[1])
+    # sim.dust.s.max[0] = sim.dust.s.min[0] * \
+    #    np.exp(2.*np.log(sim.dust.Sigma[0, 1]/sim.dust.Sigma[0, 0]) / xip4)
+    # xip4 = 2. * np.log(sim.dust.Sigma[-2, 1]/sim.dust.Sigma[-2, 0]) / \
+    #    np.log(sim.dust.s.max[-2]/sim.dust.s.min[-2])
+    # sim.dust.s.max[-1] = sim.dust.s.min[-1] * \
+    #    np.exp(2.*np.log(sim.dust.Sigma[-1, 1]/sim.dust.Sigma[-1, 0]) / xip4)
+
+    # print(repr(sim.dust.s.max))
+    # print(repr(sim.dust.s.min))
+    # print(repr(sim.dust.s.int))
+    # print(repr(sim.dust.Sigma))
 
 
 def dt(sim):
@@ -395,6 +410,9 @@ def xicalc(sim):
     -------
     xicalc : Field
         Calculated exponent of distribution"""
+    # print(repr(np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0])))
+    # print(repr(sim.dust.s.max / sim.dust.s.int))
+    # print(repr(sim.dust.s.max / sim.dust.s.int))
     return np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0]) / np.log10(sim.dust.s.max / sim.dust.s.int) - 4.
 
 
@@ -442,31 +460,35 @@ def S_coag(sim, Sigma=None):
     pfrag = sim.dust.p.frag
     pstick = sim.dust.p.stick
 
-    #nan = False
+    debug = True
 
-    # if (H == 0.).any():
-    #    print("H")
-    #    nan = True
+    if debug:
 
-    # if (sigma == 0.).any():
-    #    print("sigma")
-    #    nan = True
+        nan = False
 
-    # if (dv == 0.).any():
-    #    print("dv")
-    #    nan = True
+        if (H == 0.).any():
+            print("H")
+            nan = True
 
-    # if (m == 0.).any():
-    #    print("m")
-    #    nan = True
+        if (sigma == 0.).any():
+            print("sigma")
+            nan = True
 
-    # if (sint == 0.).any():
-    #    print("sint")
-    #    nan = True
+        if (dv == 0.).any():
+            print("dv")
+            nan = True
 
-    # if nan:
-    #    import sys
-    #    sys.exit()
+        if (m == 0.).any():
+            print("m")
+            nan = True
+
+        if (sint == 0.).any():
+            print("sint")
+            nan = True
+
+        if nan:
+            import sys
+            sys.exit()
 
     xiprime = pfrag*xifrag[:, None, None] + pstick*xistick[:, None, None]
     F = H[:, 1] * np.sqrt(2. / (H[:, 0]**2 + H[:, 1]**2)) \

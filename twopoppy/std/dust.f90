@@ -29,6 +29,7 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
   double precision :: xip4(Nr)
   double precision :: xip5(Nr)
   double precision :: R(Nr)
+  double precision :: dum
 
   xip4(:) = xi(:) + 4.d0
   xip5(:) = xi(:) + 5.d0
@@ -50,12 +51,15 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
 
     else
 
-      a(i, 1) = R(i) * ( sint(i)**xip5(i) - smin(i)**xip5(i) ) / ( sint(i)**xip4(i) - smin(i)**xip4(i) )
-      a(i, 2) = R(i) * ( smax(i)**xip5(i) - sint(i)**xip5(i) ) / ( smax(i)**xip4(i) - sint(i)**xip4(i) )
+      dum = sqrt(smin(i)/smax(i))
+      a(i, 1) = R(i) * sint(i) * (1.d0-dum**xip5(i)) / (1.d0-dum**xip4(i))
+      a(i, 2) = R(i) * sint(i) * (dum**(-xip5(i))-1.d0) / (dum**(-xip4(i))-1.d0)
+      !a(i, 1) = R(i) * ( sint(i)**xip5(i) - smin(i)**xip5(i) ) / ( sint(i)**xip4(i) - smin(i)**xip4(i) )
+      !a(i, 2) = R(i) * ( smax(i)**xip5(i) - sint(i)**xip5(i) ) / ( smax(i)**xip4(i) - sint(i)**xip4(i) )
       a(i, 4) = R(i) * ( smax(i)**xip5(i) - smin(i)**xip5(i) ) / ( smax(i)**xip4(i) - smin(i)**xip4(i) )
 
     end if
-    
+
   end do
 
   a(:, 3) = 0.5d0 * a(:, 4)

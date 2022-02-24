@@ -58,6 +58,8 @@ class Simulation(dp.Simulation):
         addelemtafter(updtordr, "xi", "s")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
+        # Add "SigmaFloor" after "m"
+        addelemtafter(updtordr, "SigmaFloor", "m")
         # Removing elements that are not used
         updtordr.remove("kernel")
         # Assign updateorder
@@ -438,6 +440,7 @@ class Simulation(dp.Simulation):
             self.dust.addfield(
                 "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]"
             )
+            self.dust.SigmaFloor.updater = std.dust.SigmaFloor
         # Surface density, if not set
         if self.dust.Sigma is None:
             Sigma = std.dust.Sigma_initial(self)
@@ -475,6 +478,7 @@ class Simulation(dp.Simulation):
                 self.grid.r[::-1],
                 self.grid.ri[::-1],
                 self.dust.Sigma[::-1],
-                condition="val",
+                # condition="val",
+                condition="const_grad",
                 value=0.1 * self.dust.SigmaFloor[-1]
             )
