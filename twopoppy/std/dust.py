@@ -57,7 +57,6 @@ def finalize_implicit(sim):
 
     # print(repr(sim.dust.s.max))
     # print(repr(sim.dust.s.min))
-    # print(repr(sim.dust.s.int))
     # print(repr(sim.dust.Sigma))
 
 
@@ -150,7 +149,7 @@ def a(sim):
     -------
     a : Field
         Particle sizes"""
-    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.s.int, sim.dust.xi.calc, sim.grid._Nm_long)
+    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.xi.calc, sim.grid._Nm_long)
 
 
 def F_adv(sim, Sigma=None):
@@ -303,9 +302,9 @@ def Sigma_initial(sim):
         Initial dust surface density"""
     xi = sim.dust.xi.calc
     xip4 = xi + 4.
-    sint = sim.dust.s.int
     smax = sim.dust.s.max
     smin = sim.dust.s.min
+    sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
 
     # Values for xi != -4
     S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xip4)
@@ -410,25 +409,11 @@ def xicalc(sim):
     -------
     xicalc : Field
         Calculated exponent of distribution"""
+    sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
     # print(repr(np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0])))
-    # print(repr(sim.dust.s.max / sim.dust.s.int))
-    # print(repr(sim.dust.s.max / sim.dust.s.int))
-    return np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0]) / np.log10(sim.dust.s.max / sim.dust.s.int) - 4.
-
-
-def sint(sim):
-    """Function calculates the intermediate particle size.
-
-    Parameters
-    ----------
-    sim : Frame
-        Parent simulation frame
-
-    Returns
-    -------
-    sint : Field
-        Intermediate particle size"""
-    return np.sqrt(sim.dust.s.min * sim.dust.s.max)
+    # print(repr(sim.dust.s.max / sint))
+    # print(repr(sim.dust.s.max / sint))
+    return np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0]) / np.log(sim.dust.s.max / sint) - 4.
 
 
 def S_coag(sim, Sigma=None):
@@ -454,7 +439,7 @@ def S_coag(sim, Sigma=None):
     dv = sim.dust.v.rel.tot
     m = sim.dust.m
     smax = sim.dust.s.max
-    sint = sim.dust.s.int
+    sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
     xifrag = sim.dust.xi.frag
     xistick = sim.dust.xi.stick
     pfrag = sim.dust.p.frag

@@ -1,4 +1,4 @@
-subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
+subroutine calculate_a(smin, smax, xi, a, Nr, Nm)
   ! Subroutine calculates the particle sizes.
   ! a = [a0, a1, 0.5*amean, amean]
   !
@@ -6,7 +6,6 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
   ! ----------
   ! smin(Nr) : Minimal particle size
   ! smax(Nr) : Maximum particle size
-  ! sint(Nr) : Intermediate particle size
   ! xi(Nr) : Calculated distribution exponent
   ! Nr : Number of radial grid cells
   ! Nm : Number of mass bins
@@ -19,18 +18,19 @@ subroutine calculate_a(smin, smax, sint, xi, a, Nr, Nm)
 
   double precision, intent(in)  :: smin(Nr)
   double precision, intent(in)  :: smax(Nr)
-  double precision, intent(in)  :: sint(Nr)
   double precision, intent(in)  :: xi(Nr)
   double precision, intent(out) :: a(Nr, Nm)
   integer,          intent(in)  :: Nr
   integer,          intent(in)  :: Nm
 
   integer :: i
+  double precision :: sint(Nr)
   double precision :: xip4(Nr)
   double precision :: xip5(Nr)
   double precision :: R(Nr)
   double precision :: dum
 
+  sint(:) = sqrt(smin(:) * smax(:))
   xip4(:) = xi(:) + 4.d0
   xip5(:) = xi(:) + 5.d0
   R(:) = xip4(:) / xip5(:)
@@ -237,7 +237,7 @@ end subroutine m
 subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
   ! Subroutine calculates the fragmentation probability.
   ! It is assuming a Maxwell-Boltzmann velocity distribution.
-  ! 
+  !
   ! Parameters
   ! ----------
   ! vrel(Nr, Nm, Nm) : Relative velocity
@@ -260,7 +260,7 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
   double precision, intent(out) :: pf(Nr, Nm, Nm)
   integer,          intent(in)  :: Nr
   integer,          intent(in)  :: Nm
-  
+
   double precision :: dum
   integer :: ir
   integer :: i

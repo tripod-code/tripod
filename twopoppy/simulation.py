@@ -40,8 +40,6 @@ class Simulation(dp.Simulation):
         self.dust.addgroup("s", description="Specific particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
-        self.dust.s.int = None
-        self.dust.s.updater = ["int"]
 
         # Adjusting update orders
 
@@ -433,12 +431,6 @@ class Simulation(dp.Simulation):
                 "max", smax, description="Maximum particle size"
             )
         self.dust.s.max.differentiator = std.dust.smax_deriv
-        if self.dust.s.int is None:
-            sint = np.sqrt(0.1) * self.ini.dust.aIniMax * np.ones(shape1)
-            self.dust.s.addfield(
-                "int", sint, description="Intermediate particle size"
-            )
-            self.dust.s.int.updater = std.dust.sint
 
         # Floor value
         if self.dust.SigmaFloor is None:
