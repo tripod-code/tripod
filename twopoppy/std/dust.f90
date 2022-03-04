@@ -39,24 +39,24 @@ subroutine calculate_a(smin, smax, xi, a, Nr, Nm)
 
     if(xi(i) .eq. -5.d0) then
 
-      a(i, 1) = sint(i) * smin(i) / ( sint(i) - smin(i) ) * log( sint(i) / smin(i) )
-      a(i, 2) = smax(i) * sint(i) / ( smax(i) - sint(i) ) * log( smax(i) / sint(i) )
-      a(i, 4) = smax(i) * smin(i) / ( smax(i) - smin(i) ) * log( smax(i) / smin(i) )
+      a(i, 1) = sint(i) * smin(i) / (sint(i) - smin(i)) * log(sint(i) / smin(i))
+      a(i, 2) = smax(i) * sint(i) / (smax(i) - sint(i)) * log(smax(i) / sint(i))
+      a(i, 4) = smax(i) * smin(i) / (smax(i) - smin(i)) * log(smax(i) / smin(i))
 
     else if(xi(i) .eq. -4.d0) then
 
-      a(i, 1) = ( sint(i) - smin(i) ) / log( sint(i) / smin(i) )
-      a(i, 2) = ( smax(i) - sint(i) ) / log( smax(i) / sint(i) )
-      a(i, 4) = ( smax(i) - smin(i) ) / log( smax(i) / smin(i) )
+      a(i, 1) = (sint(i) - smin(i)) / log(sint(i) / smin(i))
+      a(i, 2) = (smax(i) - sint(i)) / log(smax(i) / sint(i))
+      a(i, 4) = (smax(i) - smin(i)) / log(smax(i) / smin(i))
 
     else
 
-      dum = sqrt(smin(i)/smax(i))
-      a(i, 1) = R(i) * sint(i) * (1.d0-dum**xip5(i)) / (1.d0-dum**xip4(i))
-      a(i, 2) = R(i) * sint(i) * (dum**(-xip5(i))-1.d0) / (dum**(-xip4(i))-1.d0)
-      !a(i, 1) = R(i) * ( sint(i)**xip5(i) - smin(i)**xip5(i) ) / ( sint(i)**xip4(i) - smin(i)**xip4(i) )
-      !a(i, 2) = R(i) * ( smax(i)**xip5(i) - sint(i)**xip5(i) ) / ( smax(i)**xip4(i) - sint(i)**xip4(i) )
-      a(i, 4) = R(i) * ( smax(i)**xip5(i) - smin(i)**xip5(i) ) / ( smax(i)**xip4(i) - smin(i)**xip4(i) )
+      dum = sqrt(smin(i) / smax(i))
+      a(i, 1) = R(i) * sint(i) * (1.d0 - dum**xip5(i)) / (1.d0 - dum**xip4(i))
+      a(i, 2) = R(i) * sint(i) * (dum**(-xip5(i)) - 1.d0) / (dum**(-xip4(i)) - 1.d0)
+      ! a(i, 1) = R(i) * (sint(i)**xip5(i) - smin(i)**xip5(i)) / (sint(i)**xip4(i) - smin(i)**xip4(i))
+      ! a(i, 2) = R(i) * (smax(i)**xip5(i) - sint(i)**xip5(i)) / (smax(i)**xip4(i) - sint(i)**xip4(i))
+      a(i, 4) = R(i) * (smax(i)**xip5(i) - smin(i)**xip5(i)) / (smax(i)**xip4(i) - smin(i)**xip4(i))
 
     end if
 
@@ -104,10 +104,10 @@ subroutine fi_adv(Sigma, v, r, ri, Fi, Nr, Nm_s, Nm_l)
   do i=1, Nm_s
     call interp1d(ri, r, v(:, i), vi, Nr)
     do ir=2, Nr
-      Fi(ir, i) = Sigma(ir-1, i)*max(0.0, vi(ir)) + Sigma(ir, i)*min(vi(ir), 0.d0)
+      Fi(ir, i) = Sigma(ir-1, i) * max(0.0, vi(ir)) + Sigma(ir, i) * min(vi(ir), 0.d0)
     end do
-    Fi(1, i) = Sigma(1, i)*min(vi(2), 0.d0)
-    Fi(Nr+1, i) = Sigma(Nr, i)*max(0.0, vi(Nr))
+    Fi(1, i) = Sigma(1, i) * min(vi(2), 0.d0)
+    Fi(Nr+1, i) = Sigma(Nr, i) * max(0.0, vi(Nr))
   end do
 
 end subroutine fi_adv
@@ -174,7 +174,7 @@ subroutine fi_diff(D, SigmaD, SigmaG, St, u, r, ri, Fi, Nr, Nm_s, Nm_l)
   end do
 
   do ir=2, Nr
-    gradepsi(ir, :) = ( eps(ir, :) - eps(ir-1, :) ) / ( r(ir) - r(ir-1) )
+    gradepsi(ir, :) = (eps(ir, :) - eps(ir-1, :)) / (r(ir) - r(ir-1))
   end do
 
   do i=1, Nm_s
@@ -197,13 +197,13 @@ subroutine fi_diff(D, SigmaD, SigmaG, St, u, r, ri, Fi, Nr, Nm_s, Nm_l)
 end subroutine fi_diff
 
 
-subroutine m(a, rho, fill, masses, Nr, Nm)
+subroutine calculate_m(a, rhos, fill, masses, Nr, Nm)
   ! Subroutine calculates the particle masses.
   !
   ! Parameters
   ! ----------
   ! a(Nr, Nm) : Particle sizes
-  ! rho(Nr, Nm) : Particle bulk densities
+  ! rhos(Nr, Nm) : Solid state density
   ! fill(Nr, Nm) : Filling factor
   ! Nr : Number of radial grid cells
   ! Nm : Number of mass bins
@@ -217,7 +217,7 @@ subroutine m(a, rho, fill, masses, Nr, Nm)
   implicit None
 
   double precision, intent(in)  :: a(Nr, Nm)
-  double precision, intent(in)  :: rho(Nr, Nm)
+  double precision, intent(in)  :: rhos(Nr, Nm)
   double precision, intent(in)  :: fill(Nr, Nm)
   double precision, intent(out) :: masses(Nr, Nm)
   integer,          intent(in)  :: Nr
@@ -231,7 +231,7 @@ subroutine m(a, rho, fill, masses, Nr, Nm)
     end do
   end do
 
-end subroutine m
+end subroutine calculate_m
 
 
 subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
@@ -253,6 +253,8 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
   ! -----
   ! The sticking probability is ps = 1 - pf
 
+  use constants, only: pi
+
   implicit none
 
   double precision, intent(in)  :: vrel(Nr, Nm, Nm)
@@ -266,11 +268,12 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
   integer :: i
   integer :: j
 
+  fac = sqrt(108.d0 / (8.d0 * pi**2))
   do i=1, Nm
     do j=1, i
       do ir=2, Nr-1
         dum = (vfrag(ir)/vrel(ir, j, i))**2
-        pf(ir, j, i) = (1.5d0*dum + 1.d0) * exp(-1.5d0*dum)
+        pf(ir, j, i) = fac * (2.d0/3.d0*dum**3 + 4.d0/3.d0*dum**2 + 16.d0/9.d0*dum + 32.d0/27.d0) * exp(-1.5d0*dum)
         pf(ir, i, j) = pf(ir, j, i)
       end do
     end do
@@ -320,7 +323,7 @@ subroutine vrel_brownian_motion(cs, m, T, vrel, Nr, Nm)
   do i=1, Nm
     do j=1, i
       do ir=1, Nr
-        dum = min(sqrt(fac2(ir)*(m(ir, j)+m(ir, i))/(m(ir, j)*m(ir, i))), cs(ir))
+        dum = min(sqrt(fac2(ir) * (m(ir, j) + m(ir, i)) / (m(ir, j) * m(ir, i))), cs(ir))
         vrel(ir, j, i) = dum
         vrel(ir, i, j) = dum
       end do

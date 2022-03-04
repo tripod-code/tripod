@@ -37,7 +37,7 @@ class Simulation(dp.Simulation):
         self.dust.xi.frag = None
         self.dust.xi.stick = None
         self.dust.xi.updater = ["calc"]
-        self.dust.addgroup("s", description="Specific particle sizes")
+        self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
 
@@ -65,7 +65,7 @@ class Simulation(dp.Simulation):
 
         # Adjusting the updater of dust sources
         updtordr = self.dust.S.updateorder
-        # Add "s" after "fill"
+        # Add "coag" after "ext"
         addelemtafter(updtordr, "coag", "ext")
         # Assign updateorder
         self.dust.S.updater = updtordr
@@ -347,7 +347,7 @@ class Simulation(dp.Simulation):
             self.dust.S.coag.updater = std.dust.S_coag
         if self.dust.S.tot is None:
             self.dust.S.addfield(
-                "tot", np.zeros(shape2Sigma), description="Tot sources [g/cm²/s]"
+                "tot", np.zeros(shape2Sigma), description="Total sources [g/cm²/s]"
             )
             self.dust.S.tot.updater = std.dust.S_tot
         # Stokes number
