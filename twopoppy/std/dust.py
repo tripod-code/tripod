@@ -536,7 +536,7 @@ def smax_deriv(sim, t, smax):
     vfrag = sim.dust.v.frag
     dv = sim.dust.v.rel.tot[:, 2, 3]
     factor = 8.
-    A = (vfrag / dv)**factor
+    A = (dv / vfrag)**factor
     B = (1. - A) / (1. + A)
 
     rho = sim.dust.rho[:, :2]
