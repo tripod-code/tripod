@@ -227,7 +227,7 @@ subroutine calculate_m(a, rhos, fill, masses, Nr, Nm)
 
   do i=1, Nr
     do j=1, Nm
-      masses(i, j) = 4.d0 / 3.d0 * pi * rho(i, j) * fill(i, j) * a(i, j)**3.d0
+      masses(i, j) = 4.d0 / 3.d0 * pi * rhos(i, j) * fill(i, j) * a(i, j)**3.d0
     end do
   end do
 
