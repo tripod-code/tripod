@@ -264,6 +264,7 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
   integer,          intent(in)  :: Nm
 
   double precision :: dum
+  double precision :: fac
   integer :: ir
   integer :: i
   integer :: j
