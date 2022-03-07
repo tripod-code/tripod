@@ -268,7 +268,7 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
   integer :: i
   integer :: j
 
-  fac = sqrt(108.d0 / 8.d0) / (18.d0 * pi)
+  fac = sqrt(108.d0 / 8.d0) * 2.d0 / (9.d0 * pi)
   do i=1, Nm
     do j=1, i
       do ir=2, Nr-1
