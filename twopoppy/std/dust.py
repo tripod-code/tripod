@@ -604,36 +604,6 @@ def S_coag(sim, Sigma=None):
     pfrag = sim.dust.p.frag
     pstick = sim.dust.p.stick
 
-    debug = True
-
-    if debug:
-
-        nan = False
-
-        if (H == 0.).any():
-            print("H")
-            nan = True
-
-        if (sigma == 0.).any():
-            print("sigma")
-            nan = True
-
-        if (dv == 0.).any():
-            print("dv")
-            nan = True
-
-        if (m == 0.).any():
-            print("m")
-            nan = True
-
-        if (sint == 0.).any():
-            print("sint")
-            nan = True
-
-        if nan:
-            import sys
-            sys.exit()
-
     xiprime = pfrag * xifrag[:, None, None] + pstick * xistick[:, None, None]
 
     F = H[:, 1] * np.sqrt(2. / (H[:, 0]**2 + H[:, 1]**2)) \
@@ -711,7 +681,8 @@ def xicalc(sim):
     xicalc : Field
         Calculated exponent of distribution"""
     sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
-    # print(repr(np.log(sim.dust.Sigma[:, 1]/sim.dust.Sigma[:, 0])))
-    # print(repr(sim.dust.s.max / sint))
-    # print(repr(sim.dust.s.max / sint))
-    return np.log(sim.dust.Sigma[:, 1] / sim.dust.Sigma[:, 0]) / np.log(sim.dust.s.max / sint) - 4.
+    xi = np.log(sim.dust.Sigma[:, 1] / sim.dust.Sigma[:, 0]) / np.log(sim.dust.s.max / sint) - 4.
+    # Impose bounds to prevent problems related to e.g. exclusion of initially drifting particles
+    xi = np.minimum(xi, 15.)
+    xi = np.maximum(xi, -20.)
+    return xi
