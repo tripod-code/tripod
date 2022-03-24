@@ -168,22 +168,7 @@ def Sigma_initial(sim):
         Initial dust surface density"""
     xi = sim.dust.xi.calc
     xip4 = xi + 4.
-    smax = sim.dust.s.max
     smin = sim.dust.s.min
-    sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
-
-    # Values for xi != -4
-    S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xip4)
-    S1 = 1. - S0
-    S = np.array([S0, S1]).T
-
-    # Values for xi == -4
-    S0_4 = np.log(sint / smin) / np.log(smax / smin)
-    S1_4 = 1. - S0_4
-    S_4 = np.array([S0_4, S1_4]).T
-
-    Sigma = sim.ini.dust.d2gRatio * sim.gas.Sigma[:, None] \
-            * np.where(xi[:, None] == -4., S_4, S)
 
     # Routine for excluding initially drifting particles
     if not sim.ini.dust.allowDriftingParticles:
@@ -195,13 +180,42 @@ def Sigma_initial(sim):
         # Exponent of pressure gradient
         gamma *= sim.grid.r / P
         gamma = 1. / gamma
-        # Maximum drift limited particle size with safety margin
-        ad = 1.e-4 * 2./np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma \
+        # TODO: Apply safety margin (factor of 1.e-4?)
+        # Maximum drift limited particle size (previously: with safety margin)
+        ad = 2./np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma \
             / sim.dust.fill[:, 0] * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r)**2. \
             / sim.gas.cs**2. / gamma
-        aIni = np.minimum(sim.ini.dust.aIniMax, ad)[:, None]
-        # Set surface densities of initially drifting particles to floor value
-        Sigma = np.where(sim.dust.a[:, :2] > aIni, 0.1 * sim.dust.SigmaFloor, Sigma)
+        aIni = np.minimum(sim.ini.dust.aIniMax, ad)
+        sim.dust.s.max = np.maximum(smin, aIni)
+        smax = sim.dust.s.max
+        sint = np.sqrt(smin * smax)
+        sim.dust.a.update()
+        sim.dust.SigmaFloor.update()
+
+    SigmaFloor = sim.dust.SigmaFloor
+
+    # Values for xi != -4
+    for i in range(int(sim.grid.Nr)):
+        if smax[i] = smin[i]:
+            S0[i] = SigmaFloor[i, 0]
+            S1[i] = SigmaFloor[i, 1]
+        else:
+            S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xip4)
+            S1 = 1. - S0
+    S = np.array([S0, S1]).T
+
+    # Values for xi == -4
+    for i in range(int(sim.grid.Nr)):
+        if smax[i] = smin[i]:
+            S0_4[i] = SigmaFloor[i, 0]
+            S1_4[i] = SigmaFloor[i, 1]
+        else:
+            S0_4 = np.log(sint / smin) / np.log(smax / smin)
+            S1_4 = 1. - S0_4
+    S_4 = np.array([S0_4, S1_4]).T
+
+    Sigma = sim.ini.dust.d2gRatio * sim.gas.Sigma[:, None] \
+            * np.where(xi[:, None] == -4., S_4, S)
 
     return Sigma
 
