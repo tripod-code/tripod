@@ -36,18 +36,23 @@ subroutine calculate_a(smin, smax, xi, a, Nr, Nm)
   R(:) = xip4(:) / xip5(:)
 
   do i=1, Nr
+    if(smax(i) .eq. smin(i)) then
 
-    if(xi(i) .eq. -5.d0) then
+      a(i, :) = smin(i)
+
+    else if(xi(i) .eq. -5.d0) then
 
       a(i, 1) = sint(i) * smin(i) / (sint(i) - smin(i)) * log(sint(i) / smin(i))
       a(i, 2) = smax(i) * sint(i) / (smax(i) - sint(i)) * log(smax(i) / sint(i))
       a(i, 4) = smax(i) * smin(i) / (smax(i) - smin(i)) * log(smax(i) / smin(i))
+      a(i, 3) = 0.5d0 * a(i, 4)
 
     else if(xi(i) .eq. -4.d0) then
 
       a(i, 1) = (sint(i) - smin(i)) / log(sint(i) / smin(i))
       a(i, 2) = (smax(i) - sint(i)) / log(smax(i) / sint(i))
       a(i, 4) = (smax(i) - smin(i)) / log(smax(i) / smin(i))
+      a(i, 3) = 0.5d0 * a(i, 4)
 
     else
 
@@ -57,12 +62,11 @@ subroutine calculate_a(smin, smax, xi, a, Nr, Nm)
       ! a(i, 1) = R(i) * (sint(i)**xip5(i) - smin(i)**xip5(i)) / (sint(i)**xip4(i) - smin(i)**xip4(i))
       ! a(i, 2) = R(i) * (smax(i)**xip5(i) - sint(i)**xip5(i)) / (smax(i)**xip4(i) - sint(i)**xip4(i))
       a(i, 4) = R(i) * (smax(i)**xip5(i) - smin(i)**xip5(i)) / (smax(i)**xip4(i) - smin(i)**xip4(i))
+      a(i, 3) = 0.5d0 * a(i, 4)
 
     end if
 
   end do
-
-  a(:, 3) = 0.5d0 * a(:, 4)
 
 end subroutine calculate_a
 
