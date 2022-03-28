@@ -186,6 +186,8 @@ def Sigma_initial(sim):
             / sim.dust.fill[:, 0] * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r)**2. \
             / sim.gas.cs**2. / gamma
         aIni = np.minimum(sim.ini.dust.aIniMax, ad)
+        # Enforce initial drift limit
+        sim.dust.xi.calc = np.where(aIni < sim.ini.dust.aIniMax, sim.dust.xi.stick, sim.dust.xi.calc)
         sim.dust.s.max = np.maximum(smin, aIni)
         smax = sim.dust.s.max
         sint = np.sqrt(smin * smax)
