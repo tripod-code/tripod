@@ -200,8 +200,8 @@ def Sigma_initial(sim):
             S0[i] = SigmaFloor[i, 0]
             S1[i] = SigmaFloor[i, 1]
         else:
-            S0 = (sint**xip4 - smin**xip4) / (smax**xip4 - smin**xip4)
-            S1 = 1. - S0
+            S0[i] = (sint[i]**xip4[i] - smin[i]**xip4[i]) / (smax[i]**xip4[i] - smin[i]**xip4[i])
+            S1[i] = 1. - S0[i]
     S = np.array([S0, S1]).T
 
     # Values for xi == -4
@@ -210,8 +210,8 @@ def Sigma_initial(sim):
             S0_4[i] = SigmaFloor[i, 0]
             S1_4[i] = SigmaFloor[i, 1]
         else:
-            S0_4 = np.log(sint / smin) / np.log(smax / smin)
-            S1_4 = 1. - S0_4
+            S0_4[i] = np.log(sint[i] / smin[i]) / np.log(smax[i] / smin[i])
+            S1_4[i] = 1. - S0_4[i]
     S_4 = np.array([S0_4, S1_4]).T
 
     Sigma = sim.ini.dust.d2gRatio * sim.gas.Sigma[:, None] \
@@ -625,7 +625,7 @@ def S_coag(sim, Sigma=None):
         * (smax / sint)**(-xiprime[:, 1, 1] - 4.)
 
     dot01 = Sigma[:, 0] * Sigma[:, 1] * sigma[:, 0, 1] * dv[:, 0, 1] \
-            / (sim.dust.m[:, 1] * np.sqrt(2. * np.pi * (H[:, 0]**2 + H[:, 1]**2)))
+            / (m[:, 1] * np.sqrt(2. * np.pi * (H[:, 0]**2 + H[:, 1]**2)))
 
     dot10 = Sigma[:, 1]**2 * sigma[:, 1, 1] * dv[:, 1, 1] * F \
             / (2. * np.sqrt(np.pi) * m[:, 1] * H[:, 1])
