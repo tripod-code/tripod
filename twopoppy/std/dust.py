@@ -195,8 +195,13 @@ def Sigma_initial(sim):
     SigmaFloor = sim.dust.SigmaFloor
 
     # Values for xi != -4
+<<<<<<< HEAD
     S0 = np.zeros_like(sim.grid.r)
     S1 = np.zeros_like(sim.grid.r)
+=======
+    S0 = np.zeros_like(sim.grid.Nr)
+    S1 = np.zeros_like(sim.grid.Nr)
+>>>>>>> 0c6071d6b161bca9f70d46fa42858c7753db0637
     for i in range(int(sim.grid.Nr)):
         if smax[i] == smin[i]:
             S0[i] = SigmaFloor[i, 0]
@@ -207,8 +212,13 @@ def Sigma_initial(sim):
     S = np.array([S0, S1]).T
 
     # Values for xi == -4
+<<<<<<< HEAD
     S0_4 = np.zeros_like(sim.grid.r)
     S1_4 = np.zeros_like(sim.grid.r)
+=======
+    S0_4 = np.zeros_like(sim.grid.Nr)
+    S1_4 = np.zeros_like(sim.grid.Nr)
+>>>>>>> 0c6071d6b161bca9f70d46fa42858c7753db0637
     for i in range(int(sim.grid.Nr)):
         if smax[i] == smin[i]:
             S0_4[i] = SigmaFloor[i, 0]
