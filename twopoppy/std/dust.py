@@ -698,9 +698,4 @@ def xicalc(sim):
     -------
     xicalc : Field
         Calculated exponent of distribution"""
-    sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
-    xi = np.log(sim.dust.Sigma[:, 1] / sim.dust.Sigma[:, 0]) / np.log(sim.dust.s.max / sint) - 4.
-    # Impose bounds to prevent problems related to e.g. exclusion of initially drifting particles
-    xi = np.minimum(xi, 15.)
-    xi = np.maximum(xi, -20.)
-    return xi
+    return dust_f.calculate_xi(sim.dust.s.min, sim.dust.s.max, sim.dust.Sigma)

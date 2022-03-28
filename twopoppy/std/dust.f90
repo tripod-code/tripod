@@ -104,10 +104,10 @@ subroutine fi_adv(Sigma, v, r, ri, Fi, Nr, Nm_s, Nm_l)
   do i=1, Nm_s
     call interp1d(ri, r, v(:, i), vi, Nr)
     do ir=2, Nr
-      Fi(ir, i) = Sigma(ir-1, i) * max(0.0, vi(ir)) + Sigma(ir, i) * min(vi(ir), 0.d0)
+      Fi(ir, i) = Sigma(ir-1, i) * max(0.d0, vi(ir)) + Sigma(ir, i) * min(vi(ir), 0.d0)
     end do
     Fi(1, i) = Sigma(1, i) * min(vi(2), 0.d0)
-    Fi(Nr+1, i) = Sigma(Nr, i) * max(0.0, vi(Nr))
+    Fi(Nr+1, i) = Sigma(Nr, i) * max(0.d0, vi(Nr))
   end do
 
 end subroutine fi_adv
@@ -332,3 +332,43 @@ subroutine vrel_brownian_motion(cs, m, T, vrel, Nr, Nm)
   end do
 
 end subroutine vrel_brownian_motion
+
+
+subroutine calculate_xi(smin, smax, Sigma, xicalc, Nr, Nm)
+! Subroutine calculates the exponent of the particle size distribution.
+!
+! Parameters
+! ----------
+! smin(Nr)      : Minimum particle size
+! smax(Nr)      : Maximum particle size
+! Sigma(Nr, Nm) : Dust surface density
+! Nr            : Number of radial grid cells
+! Nm            : Number of mass bins
+!
+! Returns
+! -------
+! xicalc(Nr)    : Calculated particle size distribution exponent
+
+implicit none
+
+double precision, intent(in)  :: smin(Nr)
+double precision, intent(in)  :: smax(Nr)
+double precision, intent(in)  :: Sigma(Nr, Nm)
+double precision, intent(out) :: xicalc(Nr)
+integer,          intent(in)  :: Nr
+integer,          intent(in)  :: Nm
+
+integer :: i
+double precision :: sint(Nr)
+
+sint(:) = sqrt(smin(:) * smax(:))
+
+do i=1, Nr
+  if(smax(i) .eq. sint(i)) then
+    xicalc(i) = -2.5d0
+  else
+    xicalc(i) = max(-20.d0, min(15.d0, log(Sigma(i, 2) / Sigma(i, 1)) / log(smax(i) / sint(i)) - 4.d0))
+  end if
+end do
+
+end subroutine calculate_xi
