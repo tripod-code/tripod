@@ -182,9 +182,8 @@ def Sigma_initial(sim):
         # Exponent of pressure gradient
         gamma *= sim.grid.r / P
         gamma = 1. / gamma
-        # TODO: Apply safety margin (factor of 1.e-4?)
-        # Maximum drift limited particle size (previously: with safety margin)
-        ad = 2./np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma \
+        # Maximum drift limited particle size with safety margin
+        ad = 1.e-4 * 2./np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma \
             / sim.dust.fill[:, 0] * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r)**2. \
             / sim.gas.cs**2. / gamma
         aIni = np.minimum(sim.ini.dust.aIniMax, ad)
