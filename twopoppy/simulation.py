@@ -439,7 +439,7 @@ class Simulation(dp.Simulation):
         # Calculate particle sizes and masses which could not be initialized at this point of the simulation
         self.dust.a = std.dust_f.calculate_a(self.dust.s.min, self.dust.s.max, self.dust.xi.calc, self.grid._Nm_long)
         self.dust.m = std.dust_f.calculate_m(self.dust.a, self.dust.rhos, self.dust.fill)
-        
+
         # Floor value
         if self.dust.SigmaFloor is None:
             # TODO: What is a reasonable value for this in TwoPopPy
@@ -485,7 +485,7 @@ class Simulation(dp.Simulation):
                 self.grid.r[::-1],
                 self.grid.ri[::-1],
                 self.dust.Sigma[::-1],
-                # condition="val",
-                condition="const_grad",
+                condition="val",
+                #condition="const_grad",
                 value=0.1 * self.dust.SigmaFloor[-1]
             )
