@@ -3,6 +3,7 @@ from twopoppy.simulation import Simulation
 
 from types import SimpleNamespace
 import numpy as np
+from dustpy.std import dust_f as dp_dust_f
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
 from scipy.interpolate import interp1d
@@ -50,7 +51,7 @@ def panel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limits
     sd_max = np.ceil(np.log10(data.SigmaDusti.max()))
     sg_max = np.ceil(np.log10(data.SigmaGas.max()))
     Mmax = np.ceil(np.log10(data.Mgas.max()/c.M_sun)) + 1
-    levels = np.linspace(sd_max-(data.Nmi-2), sd_max, data.Nmi-1)
+    levels = np.linspace(sd_max-(int(data.Nmi)-2), sd_max, int(data.Nmi)-1)
     # default for data.Nmi is 8 in accordance with default sim.ini.grid.Nmbpd in dustpy
 
     width = 3.5
@@ -200,7 +201,7 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
     sd_max = np.ceil(np.log10(data.SigmaDusti.max()))
     sg_max = np.ceil(np.log10(data.SigmaGas.max()))
     Mmax = np.ceil(np.log10(data.Mgas.max()/c.M_sun)) + 1
-    levels = np.linspace(sd_max-6, sd_max, 7)
+    levels = np.linspace(sd_max-(int(data.Nmi)-2), sd_max, int(data.Nmi)-1)
 
     width = 3.5
     fig = plt.figure(figsize=(3.*width, 2.*width/1.618), dpi=150)
@@ -531,29 +532,36 @@ def _readdata(data, filename="data", extension="hdf5"):
     # Interpolation of the density distribution over mass grid
     # via distribution exponent
     Nmi = 8 # default for data.Nmi is 8 in accordance with default sim.ini.grid.Nmbpd in dustpy
-    mi = np.ones(int(Nt)) * np.logspace(smin.min(), smax.max(), Nmi)
+    Nmi = np.array([1])[None, ...] * Nmi
+    rho = rhos * fill
+    # Assumption: Particles of all sizes have same mass density
+    rho = np.full((int(Nt), int(Nr), int(Nmi - 1)), rho[0, 0, 0])
+    mmin = 4./3. * np.pi * rho[:, :, 0] * smin**3
+    mmax = 4./3. * np.pi * rho[:, :, 0] * smax**3
+    mi = np.full(int(Nmi), np.logspace(np.log10(mmin.min()), np.log10(mmax.max()), int(Nmi)))
+    mi = np.full((int(Nt), int(Nmi)), mi)
     mi0 = mi[..., :-1]
     mi1 = mi[..., 1:]
     mic = 0.5 * (mi0[...] + mi1[...])
     SigmaDustTot = SigmaDust[...].sum(-1)
     SigmaDustint = np.ones((int(Nt), int(Nr), int(Nmi-1))) * 1e-100
-    for i in range(Nt):
-        i = int(i)
-        for j in range(Nr):
-            j = int(j)
-            for k in range(Nmi-1):
-                k = int(k)
-                if mi1[k] <= smax[i, j]:
+    for i in range(int(Nt)):
+        for j in range(int(Nr)):
+            for k in range(int(Nmi-1)):
+                if mi1[i, k] <= mmax[i, j]:
                     if xicalc[i, j] != -4.:
                         expo = (xicalc[i, j]+4.) / 3.
                         SigmaDustint[i, j, k] = SigmaDustTot[i, j] * \
-                        (mi1[k]**expo - mi0[k]**expo) / \
-                        (smax[i, j]**expo - smin[i, j]**expo)
+                        (mi1[i, k]**expo - mi0[i, k]**expo) / \
+                        (mmax[i, j]**expo - mmin[i, j]**expo)
                     else:
                         SigmaDustint[i, j, k] = SigmaDustTot[i, j] * \
-                        np.log(mi1[k] / mi0[k]) / \
-                        np.log(smax[i, j] / smin[i, j])
-    Nmi = np.ones(Nt) * Nmi
+                        np.log(mi1[i, k] / mi0[i, k]) / \
+                        np.log(mmax[i, j] / mmin[i, j])
+                else:
+                    SigmaDustint[i, j, k] = np.maximum(1.e-100, SigmaDustTot[i, j] - SigmaDustint[i, j].sum())
+    if np.abs(SigmaDustTot.sum() - SigmaDustint.sum()) / SigmaDustTot.sum() > 1.e-10:
+        print("Error in surface density interpolation!")
 
     # Transformation of the density distribution
     a = np.array(np.mean(mic[..., 1:] / mic[..., :-1], axis=-1))
@@ -561,11 +569,12 @@ def _readdata(data, filename="data", extension="hdf5"):
     SigmaDusti = SigmaDustint[...] / dm[..., None, None]
 
     # Calculation of Stokes Number over mass grid
-    rho = rhos * fill
-    ai = 3 / (4 * np.pi * rho) * mic[...]**(1/3)
-    Sti = np.zeros(int(Nt))
+    ai = np.zeros((int(Nt), int(Nr), int(Nmi-1)))
     for i in range(int(Nt)):
-        Sti[i] = dp.dust_f.st_epstein_stokes1(ai, mfp[i], rho, sim.gas.Sigma[i])
+        ai[i] = np.full((int(Nr), int(Nmi-1)), 3 / (4 * np.pi * rho[i, 0, 0]) * mic[i, :]**(1/3))
+    Sti = np.zeros((int(Nt), int(Nr), int(Nmi-1)))
+    for i in range(int(Nt)):
+        Sti[i] = dp_dust_f.st_epstein_stokes1(ai[i], mfp[i], rho[i], SigmaGas[i])
 
     # Fragmentation limit
     b = vFrag**2 / (delta * cs**2)
