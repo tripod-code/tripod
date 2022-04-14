@@ -606,13 +606,18 @@ def smax_deriv(sim, t, smax):
         Parent simulation frame
     t : IntVar
         Current time
-    smax : Field
-        Current smax
+    smax : Field, optional, defaul : None
+        Current smax to be used if not None
 
     Returns
     -------
     smax_dot: Field
         Derivative of smax"""
+
+    if smax is None:
+        smax = sim.dust.s.max
+    smin = sim.dust.s.min
+
     vfrag = sim.dust.v.frag
     dv = sim.dust.v.rel.tot[:, 2, 3]
     exponent = 8.
@@ -624,18 +629,25 @@ def smax_deriv(sim, t, smax):
     rhod = rho.sum(-1)
     rhos_mean = (rho * rhos).sum(-1) / rhod
 
-    # additional modification of growth to ensure minimal distribution width is not surpassed
-    smin = sim.dust.s.min
-    smax = sim.dust.s.max
-    minimum = 2. * smin
-    threshold = 1.35 * minimum
-    factor = np.where(smax <= threshold,
-                      np.exp(-100. * (smax/threshold-1.)**2.), 1.)
-    factor = np.where(smax <= minimum, 0., factor)
-
-    # apply transition factor only to reduce decline if growth is negative
     smax_dot = rhod / rhos_mean * dv * B
-    smax_dot = np.where(smax_dot < 0., smax_dot * factor, smax_dot)
+
+    # Apply modification factor to source term.
+    # If source term is positive, no modification is applied.
+    # If source term is negative, it is attenuated below threshold value
+    sg = np.sign(smax_dot)
+    # 1 if smax_dot < 0
+    V = 0.5*(1.-sg)
+    # 1 if smax_dot > 0
+    W = 0.5*(1.+sg)
+    # Attenuation factor
+    threshold = 3. * smin
+    f = 0.5*(1+np.tanh(np.log10(smax/threshold)/0.03))
+    smax_dot *= V*f + W
+
+    # Making sure that smax is not shrinking below smin
+    # But still allow smax to grow from smin
+    smax_pos = np.maximum(smax_dot, 0.)
+    smax_dot = np.where(smax == smin, smax_pos, smax_dot)
 
     return smax_dot
 

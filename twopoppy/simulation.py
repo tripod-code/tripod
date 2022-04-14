@@ -417,18 +417,23 @@ class Simulation(dp.Simulation):
             self.dust.s.addfield(
                 "min", smin, description="Minimum particle size"
             )
-        if self.dust.s.max is None:
-            smax = self.ini.dust.aIniMax * np.ones(shape1)
-            self.dust.s.addfield(
-                "max", smax, description="Maximum particle size"
-            )
-        self.dust.s.max.differentiator = std.dust.smax_deriv
 
         # Initialize dust quantities partly to calculate Sigma
         try:
             self.dust.update()
         except:
             pass
+
+        # Initialize the initial maximum particle size
+        # This needs the pressure gradiant. Therefore, the other quantities
+        # need to be initialized previously
+        if self.dust.s.max is None:
+            smax = std.dust.smax_initial(self)
+            self.dust.s.addfield(
+                "max", smax, description="Maximum particle size"
+            )
+        self.dust.s.max.differentiator = std.dust.smax_deriv
+
         # Calculate particle sizes and masses which could not be initialized at this point of the simulation
         self.dust.a = std.dust_f.calculate_a(
             self.dust.s.min, self.dust.s.max, self.dust.xi.calc, self.grid._Nm_long)
