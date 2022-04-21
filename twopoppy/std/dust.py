@@ -157,8 +157,8 @@ def SigmaFloor(sim):
     return sim.dust.m[:, :2] / area[..., None]
 
 
-def Sigma_initial(sim):
-    """Function calculates the initial condition of the dust surface densities
+def smax_initial(sim):
+    """Function calculates the initial maximum particle sizes
 
     Parameters
     ----------
@@ -167,13 +167,13 @@ def Sigma_initial(sim):
 
     Returns
     -------
-    Sigma : Field
-        Initial dust surface density"""
-    xi = sim.dust.xi.calc
-    xip4 = xi + 4.
+    smax : Field
+        initial maximum particle sizes"""
+
+    # TODO: needs some check if aIniMax < smin
+
+    # Helper variables
     smin = sim.dust.s.min
-    smax = sim.dust.s.max
-    sint = np.sqrt(smin * smax)
 
     # Routine for excluding initially drifting particles
     if not sim.ini.dust.allowDriftingParticles:
@@ -193,12 +193,32 @@ def Sigma_initial(sim):
         # Enforce initial drift limit
         sim.dust.xi.calc = np.where(
             aIni < sim.ini.dust.aIniMax, sim.dust.xi.stick, sim.dust.xi.calc)
-        sim.dust.s.max = np.maximum(smin, aIni)
-        smax = sim.dust.s.max
-        sint = np.sqrt(smin * smax)
-        sim.dust.a.update()
-        sim.dust.SigmaFloor.update()
 
+        return np.maximum(smin, aIni)
+
+    # Return the ini value if drifting particles are allowed
+    return np.ones_like(smin) * sim.ini.dust.aIniMax
+
+
+def Sigma_initial(sim):
+    """Function calculates the initial condition of the dust surface densities
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    Sigma : Field
+        Initial dust surface density"""
+
+    # Helper variables
+    xi = sim.dust.xi.calc
+    xip4 = xi + 4.
+    smin = sim.dust.s.min
+    smax = sim.dust.s.max
+    sint = np.sqrt(smin * smax)
     SigmaFloor = sim.dust.SigmaFloor
 
     # Values for xi != -4
