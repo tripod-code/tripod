@@ -183,18 +183,10 @@ class Simulation(dp.Simulation):
         if self.integrator is None:
             instructions = [
                 Instruction(
-                    schemes.expl_1_euler,
-                    self.dust.s.max,
-                    description="smax: explicit 1st-order Euler"
-                ),
-                # If we need to use the new smax for the dust integration
-                # uncomment the following instruction
-                # Instruction(schemes.update, self.dust.s.max),
-                Instruction(
-                    std.dust.impl_1_direct,
-                    self.dust.Sigma,
-                    controller={"rhs": self.dust._rhs},
-                    description="Dust: implicit 1st-order direct solver"
+                    std.dust.impl_1_direct_Y,
+                    self.dust._Y,
+                    controller={"rhs": self.dust._Y_rhs},
+                    description="Dust (state vector): implicit 1st-order direct solver"
                 ),
                 Instruction(
                     dp.std.gas.impl_1_direct,
@@ -470,6 +462,14 @@ class Simulation(dp.Simulation):
         # The right-hand side of the matrix equation is stored in a hidden field
         self.dust._rhs = Field(self, np.zeros(
             shape2Sigmaravel), description="Right-hand side of matrix equation [g/cm²]"
+        )
+        # State vector
+        self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short)+1)*int(self.grid.Nr)),
+                           description="State vector for integration")
+        self.dust._Y.jacobinator = std.dust.Y_jacobian
+        # The right-hand side of the state vector matrix equation is stored in a hidden field
+        self.dust._Y_rhs = Field(self, np.zeros_like(
+            self.dust._Y), description="Right-hand side of state vector matrix equation"
         )
         # Boundary conditions
         if self.dust.boundary.inner is None:

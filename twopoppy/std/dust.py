@@ -68,21 +68,25 @@ def dt_smax(sim):
         Particle growth time step"""
     # TODO: Which factor for maximum growth makes sense here?
     max_growth_fact = 2.
-    smax_dot = sim.dust.s.max.derivative()[1:-1]  # Ignoring boundaries
-    smax = sim.dust.s.max[1:-1]  # Ignoring boundaries
-    smin = sim.dust.s.min[1:-1]  # Ignoring boundaries
+
+    # Helper variables. Ignoring boundaries.
+    smax_dot = sim.dust.s.max.derivative()[1:-1]
+    smax = sim.dust.s.max[1:-1]
+    smin = sim.dust.s.min[1:-1]
+
     # Time step if smax is shrinking.
     # Value must not drop below smin
-    if np.any(smax_dot < 0.):
-        mask1 = np.logical_and(smax > smin, smax_dot < 0.)
+    mask1 = np.logical_and(smax_dot < 0., smax > smin)
+    if np.any(mask1):
         rate1 = (smin[mask1] - smax[mask1]) / smax_dot[mask1]
         dt1 = np.min(np.abs(rate1))
     else:
         dt1 = 1.e100
+
     # Time step if smax is growing.
     # Value must not grow by more than the maximum growth factor
-    if np.any(smax_dot > 0.):
-        mask2 = np.where(smax_dot > 0.)
+    mask2 = smax_dot > 0.
+    if np.any(mask2):
         rate2 = (max_growth_fact - 1.) * smax[mask2] / smax_dot[mask2]
         dt2 = np.min(np.abs(rate2))
     else:
@@ -98,6 +102,13 @@ def prepare(sim):
     ----------
     sim : Frame
         Parent simulation frame"""
+    Nm_s = int(sim.grid._Nm_short)
+    Nr = int(sim.grid.Nr)
+
+    # Copy values to state vector Y
+    sim.dust._Y[:Nm_s*Nr] = sim.dust.Sigma.ravel()
+    sim.dust._Y[Nm_s*Nr:] = sim.dust.s.max*sim.dust.Sigma[:, 1]
+
     # Setting coagulation sources and external sources at boundaries to zero
     sim.dust.S.coag[0] = 0.
     sim.dust.S.coag[-1] = 0.
@@ -114,6 +125,15 @@ def finalize(sim):
     ----------
     sim : Frame
         Parent integration frame"""
+    Nm_s = int(sim.grid._Nm_short)
+    Nr = int(sim.grid.Nr)
+
+    # Copy values from state vector to fields
+    sim.dust.Sigma[...] = sim.dust._Y[:Nr*Nm_s].reshape(sim.dust.Sigma.shape)
+    # Making sure smax is not smaller than smin
+    sim.dust.s.max[...] = np.maximum(
+        sim.dust.s.min, sim.dust._Y[Nr*Nm_s:]/sim.dust.Sigma[:, 1])
+
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
     sim.dust.v.rad.update()
@@ -780,6 +800,71 @@ def xicalc(sim):
     return dust_f.calculate_xi(sim.dust.s.min, sim.dust.s.max, sim.dust.Sigma)
 
 
+def Y_jacobian(sim, x, dx=None, *args, **kwargs):
+
+    # Helper variables for convenience
+    if dx is None:
+        dt = x.stepsize
+    else:
+        dt = dx
+    r = sim.grid.r
+    ri = sim.grid.ri
+    area = sim.grid.A
+    Nr = int(sim.grid.Nr)
+    Nm_s = int(sim.grid._Nm_short)
+
+    # Getting the Jacobian of Sigma
+    J_Sigma = sim.dust.Sigma.jacobian(x, dx=dt)
+
+    # Building the hydrodynamic Jacobian of smax
+
+    # We are advecting smax*Sigma[1], which is stored in Y
+    smaxSig = sim.dust._Y[Nm_s*Nr:]
+
+    # Creating the sparse matrix
+    A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
+        area,
+        sim.dust.D[:, 1],
+        r,
+        ri,
+        smaxSig,
+        sim.dust.v.rad[:, 1]
+    )
+    # Setting boundary conditions for the Jacobian of smax*Sigma
+    # The boundary condition is constant value on both boundaries
+    B[0, 0] = 0.
+    C[0, 0] = 1./dt
+    B[-1, 0] = 0.
+    A[-1, 0] = 1./dt
+    # Building the matrix
+    J_smax_hyd = sp.diags(
+        (A[1:, 0], B[:, 0], C[:-1, 0]),
+        offsets=(-1, 0, 1),
+        shape=(Nr, Nr),
+        format="csc"
+    )
+
+    # Stitching together both matrices
+    # This is the fastest possibility I could find
+    J = J_Sigma.copy()
+    J.data = np.hstack((J_Sigma.data, J_smax_hyd.data))
+    J.indices = np.hstack(
+        (J_Sigma.indices, J_smax_hyd.indices+J_Sigma.shape[0]))
+    J.indptr = np.hstack(
+        (J_Sigma.indptr, J_smax_hyd.indptr[1:]+len(J_Sigma.data)))
+    Ntot = J_Sigma.shape[0]+J_smax_hyd.shape[0]
+    J._shape = (Ntot, Ntot)
+
+    # Stitching together the right hand sides of the equations
+    Sigma_rhs = sim.dust._rhs[...]
+    smaxSig_rhs = smaxSig[...]
+    smaxSig_rhs[0] = 0.
+    smaxSig_rhs[-1] = 0.
+    sim.dust._Y_rhs[:] = np.hstack((Sigma_rhs, smaxSig_rhs))
+
+    return J
+
+
 def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     """Implicit 1st-order integration scheme with direct matrix inversion
     Parameters
@@ -835,3 +920,69 @@ class impl_1_direct(Scheme):
 
     def __init__(self):
         super().__init__(_f_impl_1_direct, description="Implicit 1st-order direct solver")
+
+
+def _f_impl_1_direct_Y(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
+    """Implicit 1st-order integration scheme with direct matrix inversion
+    Parameters
+    ----------
+    x0 : Intvar
+        Integration variable at beginning of scheme
+    Y0 : Field
+        Variable to be integrated at the beginning of scheme
+    dx : IntVar
+        Stepsize of integration variable
+    jac : Field, optional, defaul : None
+        Current Jacobian. Will be calculated, if not set
+    args : additional positional arguments
+    kwargs : additional keyworda arguments
+    Returns
+    -------
+    dY : Field
+        Delta of variable to be integrated
+    Butcher tableau
+    ---------------
+     1 | 1
+    ---|---
+       | 1
+    """
+    if jac is None:
+        jac = Y0.jacobian(x0, dx)
+    if rhs is None:
+        rhs = np.array(Y0.ravel())
+
+    # Add external/explicit source terms to right-hand side
+    # Sigma
+    S_Sigma_ext = np.zeros_like(Y0._owner.dust.Sigma)
+    S_Sigma_ext[1:-1, ...] = Y0._owner.dust.S.ext[1:-1, ...]
+    # smax*Sigma
+    S_smax_expl = np.zeros_like(Y0._owner.dust.s.max)
+    S_smax_expl[1:-1] = Y0._owner.dust.s.max.derivative()[1:-1] * \
+        Y0._owner.dust.Sigma[1:-1, 1]
+    # Stitching both parts together
+    S = np.hstack((S_Sigma_ext.ravel(), S_smax_expl))
+
+    # Right hand side
+    rhs[...] += dx*S
+
+    N = jac.shape[0]
+    eye = sp.identity(N, format="csc")
+
+    A = eye - dx[0] * jac
+
+    A_LU = sp.linalg.splu(A,
+                          permc_spec="MMD_AT_PLUS_A",
+                          diag_pivot_thresh=0.0,
+                          options=dict(SymmetricMode=True))
+    Y1_ravel = A_LU.solve(rhs)
+
+    Y1 = Y1_ravel.reshape(Y0.shape)
+
+    return Y1 - Y0
+
+
+class impl_1_direct_Y(Scheme):
+    """Modified class for implicit dust integration."""
+
+    def __init__(self):
+        super().__init__(_f_impl_1_direct_Y, description="Implicit 1st-order direct solver")
