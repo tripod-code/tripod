@@ -10,6 +10,10 @@ from scipy.interpolate import interp1d
 from simframe.io.writers import hdf5writer
 import os
 
+from IPython.display import display
+import ipywidgets as widgets
+from scipy.constants import golden
+
 
 def panel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limits=True, show_St1=True):
     """Simple plotting script for data files or simulation objects.
