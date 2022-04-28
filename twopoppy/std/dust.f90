@@ -378,13 +378,22 @@ end do
 end subroutine calculate_xi
 
 
-subroutine jacobian_coagulation_generator(M0, M1, dat, row, col, Nr, Nm)
+subroutine jacobian_coagulation_generator(a, dv, H, m, pfrag, pstick, Sigma, smin, smax, xifrag, xistick, dat, row, col, Nr, Nm)
   ! Subroutine calculates the coagulation Jacobian at every radial grid cell except for the boundaries.
   !
   ! Parameters
   ! ----------
-  ! M0(Nr) : First diagonal element of grid cell Jacobain
-  ! M1(Nr) : Second diagonal element of grid cell Jacobian
+  ! a(Nr, Nm) : Particle sizes of a0 and a1
+  ! dv(Nr, Nm, Nm) : Relative velocities of a0 and a1
+  ! H(Nr, Nm) : Dust scale heights
+  ! m(Nr, Nm) : Particle masses
+  ! pfrag(Nr, Nm, Nm) : Fragmentation probability
+  ! pstick(Nr, Nm, Nm) : Sticking probability
+  ! Sigma(Nr, Nm) : Dust surface densities
+  ! smin(Nr) : Minimum particle size
+  ! smax(Nr) : Maximum particle size
+  ! xifrag(Nr) : Fragmentation exponent
+  ! xistick(Nr) : Sticking exponent
   ! Nr : Number of radial grid cells
   ! Nm : Number of mass bins
   !
@@ -394,17 +403,36 @@ subroutine jacobian_coagulation_generator(M0, M1, dat, row, col, Nr, Nm)
   ! row((Nr-2)*Nm*Nm) : row location of non-zero elements
   ! col((Nr-2)*Nm*Nm) : column location of non-zero elements
   
+  use constants, only: pi
+
   implicit none
 
-  double precision, intent(in)  :: M0(Nr)
-  double precision, intent(in)  :: M1(Nr)
+  double precision, intent(in)  :: a(Nr, Nm)
+  double precision, intent(in)  :: dv(Nr, Nm, Nm)
+  double precision, intent(in)  :: H(Nr, Nm)
+  double precision, intent(in)  :: m(Nr, Nm)
+  double precision, intent(in)  :: pfrag(Nr, Nm, Nm)
+  double precision, intent(in)  :: pstick(Nr, Nm, Nm)
+  double precision, intent(in)  :: Sigma(Nr, Nm)
+  double precision, intent(in)  :: smin(Nr)
+  double precision, intent(in)  :: smax(Nr)
+  double precision, intent(in)  :: xifrag(Nr)
+  double precision, intent(in)  :: xistick(Nr)
   double precision, intent(out) :: dat((Nr-2)*Nm*Nm)
   integer,          intent(out) :: row((Nr-2)*Nm*Nm)
   integer,          intent(out) :: col((Nr-2)*Nm*Nm)
   integer,          intent(in)  :: Nr
   integer,          intent(in)  :: Nm
 
+  double precision :: C1(Nr)
+  double precision :: C2(Nr)
+  double precision :: F(Nr)
   double precision :: jac(Nr, Nm, Nm)
+  double precision :: M1(Nr)
+  double precision :: M2(Nr)
+  double precision :: sig(Nr, Nm, Nm)
+  double precision :: sint(Nr)
+  double precision :: xiprime(Nr)
 
   integer :: ir
   integer :: i
@@ -418,13 +446,29 @@ subroutine jacobian_coagulation_generator(M0, M1, dat, row, col, Nr, Nm)
   row(:) = 0
   col(:) = 0
 
-  ! Filling the grid cell Jacobian
-  do ir=2, Nr-1
-    jac(ir, 1, 1) =  M0(ir)
-    jac(ir, 1, 2) = -M1(ir)
-    jac(ir, 2, 1) = -M0(ir)
-    jac(ir, 2, 2) =  M1(ir)
+  do i=1, Nm
+    do j=1, Nm
+      sig(:, j, i) = pi*(a(:, j)**2 + a(:, i)**2)
+    end do
   end do
+
+  sint(:) = SQRT(smin(:)*smax(:))
+  xiprime(:) = pfrag(:, 2, 2)*xifrag(:) + pstick(:, 2, 2)*xistick(:)
+
+  F(:) = H(:, 2) * SQRT(2.d0 / (H(:, 1)**2 + H(:, 2)**2)) &
+    & * sig(:, 1, 2) / sig(:, 2, 2) * dv(:, 1, 2) / dv(:, 2, 2) &
+    & * (smax(:)/sint(:))**(-xiprime(:) - 4.d0)
+
+  C1(:) = sig(:, 1, 2) * dv(:, 1, 2) / ( m(:, 2) * SQRT( 2.d0 * pi * ( H(:, 1)**2 + H(:, 2)**2 ) ) )
+  C2(:) = sig(:, 2, 2) * dv(:, 2, 2) * F(:) / ( 2.d0 * m(:, 2) * SQRT(pi) * H(:, 2) )
+  M1(:) = -C1(:)*Sigma(:, 2)
+  M2(:) =  C1(:)*Sigma(:, 1) - 2.d0*C2(:)*Sigma(:, 2)
+
+  ! Filling the grid cell Jacobian
+  jac(:, 1, 1) =  M1(:)
+  jac(:, 1, 2) = -M2(:)
+  jac(:, 2, 1) = -M1(:)
+  jac(:, 2, 2) =  M2(:)
 
   ! Filling the data array
   k = 1

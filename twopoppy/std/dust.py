@@ -13,6 +13,7 @@ import numpy as np
 import scipy.sparse as sp
 
 
+
 def dt(sim):
     """Function calculates the time step from dust.
 
@@ -28,6 +29,7 @@ def dt(sim):
     dtSigma = dt_Sigma(sim)
     dtsmax = dt_smax(sim)
     return np.minimum(dtSigma, dtsmax)
+
 
 
 def dt_Sigma(sim):
@@ -51,6 +53,7 @@ def dt_Sigma(sim):
         dt = sim.dust.Sigma[mask] / sim.dust.S.tot[mask]
         return np.min(np.abs(dt))
     return 1.e100
+
 
 
 def dt_smax(sim):
@@ -94,6 +97,7 @@ def dt_smax(sim):
     return np.minimum(dt1, dt2)
 
 
+
 def prepare(sim):
     """Function prepares implicit dust integration step.
     It stores the current value of the surface density in a hidden field.
@@ -116,6 +120,7 @@ def prepare(sim):
     sim.dust.S.ext[-1] = 0.
     # Storing current surface density
     sim.dust._SigmaOld[...] = sim.dust.Sigma[...]
+
 
 
 def finalize(sim):
@@ -160,6 +165,7 @@ def finalize(sim):
     # print(repr(sim.dust.Sigma))
 
 
+
 def smax_initial(sim):
     """Function calculates the initial maximum particle sizes
 
@@ -201,6 +207,7 @@ def smax_initial(sim):
 
     # Return the ini value if drifting particles are allowed
     return np.ones_like(smin) * sim.ini.dust.aIniMax
+
 
 
 def Sigma_initial(sim):
@@ -255,6 +262,7 @@ def Sigma_initial(sim):
     return Sigma
 
 
+
 def jacobian(sim, x, dx=None, *args, **kwargs):
     """Function calculates the Jacobian for implicit dust integration.
 
@@ -291,51 +299,25 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
     Nr = int(sim.grid.Nr)
     Nm_s = int(sim.grid._Nm_short)
 
-    # Building coagulation Jacobian
-
     # Total problem size
     Ntot = int((Nr*Nm_s))
 
-    # Building the coagulation Jacobian
-    # Helper variables
-    sigma = np.pi * (sim.dust.a[:, :, None]**2 + sim.dust.a[:, None, :]**2)
-    dv = sim.dust.v.rel.tot
-    H2 = sim.dust.H**2
-    m = sim.dust.m
-    sint = np.sqrt(sim.dust.s.min * sim.dust.s.max)
-    smax = sim.dust.s.max
-    xifrag = sim.dust.xi.frag
-    xistick = sim.dust.xi.stick
-    pfrag = sim.dust.p.frag
-    pstick = sim.dust.p.stick
-
-    # Building the Jacobian within grid cells
-    # J_grid = (M0, -M1 // -M0 M1)
-    xiprime = pfrag * xifrag[:, None, None] + pstick * xistick[:, None, None]
-    F = np.sqrt(2.*H2[:, 1]/H2[:, :2].sum(-1)) * sigma[:, 0, 1] / \
-        sigma[:, 1, 1] * dv[:, 0, 1]/dv[:, 1, 1] * \
-        (smax/sint)**(-xiprime[:, 1, 1]-4)
-    C0 = sigma[:, 0, 1] * dv[:, 0, 1] / \
-        (m[:, 1] * np.sqrt(2.*np.pi*H2[:, :2].sum(-1)))
-    C1 = sigma[:, 1, 1] * dv[:, 1, 1] * F / \
-        (2.*m[:, 1]*np.sqrt(np.pi*H2[:, 1]))
-    # The first diagonal entry of the grid cell Jacobian
-    M0 = -C0*sim.dust.Sigma[:, 1]
-    # The second diagonal entry of the grid cell Jacobian
-    M1 = C0*sim.dust.Sigma[:, 0] - 2.*C1*sim.dust.Sigma[:, 1]
-
-    # Stitching the grid cell Jacobians together to get the full coagulation Jacobian
-    # Getting data vector and coordinates in sparse matrix
-    dat, row, col = dust_f.jacobian_coagulation_generator(M0, M1, Nm_s)
-    gen = (dat, (row, col))
-    # Building sparse matrix of coagulation Jacobian
-    J_coag = sp.csc_matrix(
-        gen,
-        shape=(Ntot, Ntot)
+    # Getting data vector and coordinates for the coagulation sparse matrix
+    dat_coag, row_coag, col_coag = dust_f.jacobian_coagulation_generator(
+        sim.dust.a[:, :2],
+        sim.dust.v.rel.tot[:, :2, :2],
+        sim.dust.H[:, :2],
+        sim.dust.m[:, :2],
+        sim.dust.p.frag[:, :2, :2],
+        sim.dust.p.stick[:, :2, :2],
+        sim.dust.Sigma,
+        sim.dust.s.min,
+        sim.dust.s.max,
+        sim.dust.xi.frag,
+        sim.dust.xi.stick
     )
 
-    # Building the hydrodynamic Jacobian
-    # TODO: Check this call
+    # Getting data vector and coordinates for the hydrodynamic sparse matrix
     A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
         area,
         sim.dust.D[:, :2],
@@ -344,12 +326,11 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
         sim.gas.Sigma,
         sim.dust.v.rad[:, :2]
     )
-    J_hyd = sp.diags(
-        (A.ravel()[Nm_s:], B.ravel(), C.ravel()[:-Nm_s]),
-        offsets=(-Nm_s, 0, Nm_s),
-        shape=(Ntot, Ntot),
-        format="csc"
-    )
+    row_hyd = np.hstack(
+        (np.arange(Ntot-Nm_s)+Nm_s, np.arange(Ntot), np.arange(Ntot-Nm_s)))
+    col_hyd = np.hstack(
+        (np.arange(Ntot-Nm_s), np.arange(Ntot), np.arange(Ntot-Nm_s)+Nm_s))
+    dat_hyd = np.hstack((A.ravel()[Nm_s:], B.ravel(), C.ravel()[:-Nm_s]))
 
     # Right-hand side
     sim.dust._rhs[Nm_s:-Nm_s] = sim.dust.Sigma.ravel()[Nm_s:-Nm_s]
@@ -359,13 +340,13 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
     # Inner boundary
 
     # Initializing data and coordinate vectors for sparse matrix
-    dat = np.zeros(int(3.*Nm_s))
+    dat_in = np.zeros(int(3.*Nm_s))
     row0 = np.arange(int(Nm_s))
     col0 = np.arange(int(Nm_s))
     col1 = np.arange(int(Nm_s)) + Nm_s
     col2 = np.arange(int(Nm_s)) + 2.*Nm_s
-    row = np.concatenate((row0, row0, row0))
-    col = np.concatenate((col0, col1, col2))
+    row_in = np.concatenate((row0, row0, row0))
+    col_in = np.concatenate((col0, col1, col2))
 
     # Filling data vector depending on boundary condition
     if sim.dust.boundary.inner is not None:
@@ -374,12 +355,12 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             sim.dust._rhs[:Nm_s] = sim.dust.boundary.inner.value
         # Constant value
         elif sim.dust.boundary.inner.condition == "const_val":
-            dat[Nm_s:2*Nm_s] = 1./dt
+            dat_in[Nm_s:2*Nm_s] = 1./dt
             sim.dust._rhs[:Nm_s] = 0.
         # Given gradient
         elif sim.dust.boundary.inner.condition == "grad":
             K1 = - r[1]/r[0]
-            dat[Nm_s:2*Nm_s] = -K1/dt
+            dat_in[Nm_s:2*Nm_s] = -K1/dt
             sim.dust._rhs[:Nm_s] = - ri[1]/r[0] * \
                 (r[1]-r[0])*sim.dust.boundary.inner.value
         # Constant gradient
@@ -387,9 +368,9 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             Di = ri[1]/ri[2] * (r[1]-r[0]) / (r[2]-r[0])
             K1 = - r[1]/r[0] * (1. + Di)
             K2 = r[2]/r[0] * Di
-            dat[:Nm_s] = 0.
-            dat[Nm_s:2*Nm_s] = -K1/dt
-            dat[2*Nm_s:] = -K2/dt
+            dat_in[:Nm_s] = 0.
+            dat_in[Nm_s:2*Nm_s] = -K1/dt
+            dat_in[2*Nm_s:] = -K2/dt
             sim.dust._rhs[:Nm_s] = 0.
         # Given power law
         elif sim.dust.boundary.inner.condition == "pow":
@@ -400,27 +381,20 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             p = np.log(sim.dust.Sigma[2] /
                        sim.dust.Sigma[1]) / np.log(r[2]/r[1])
             K1 = - (r[0]/r[1])**p
-            dat[Nm_s:2*Nm_s] = -K1/dt
+            dat_in[Nm_s:2*Nm_s] = -K1/dt
             sim.dust._rhs[:Nm_s] = 0.
-
-    # Creating sparce matrix for inner boundary
-    gen = (dat, (row, col))
-    J_in = sp.csc_matrix(
-        gen,
-        shape=(Ntot, Ntot)
-    )
 
     # Outer boundary
 
     # Initializing data and coordinate vectors for sparse matrix
-    dat = np.zeros(int(3.*Nm_s))
+    dat_out = np.zeros(int(3.*Nm_s))
     row0 = np.arange(int(Nm_s))
     col0 = np.arange(int(Nm_s))
     col1 = np.arange(int(Nm_s)) - Nm_s
     col2 = np.arange(int(Nm_s)) - 2.*Nm_s
     offset = (Nr-1)*Nm_s
-    row = np.concatenate((row0, row0, row0)) + offset
-    col = np.concatenate((col0, col1, col2)) + offset
+    row_out = np.concatenate((row0, row0, row0)) + offset
+    col_out = np.concatenate((col0, col1, col2)) + offset
 
     # Filling data vector depending on boundary condition
     if sim.dust.boundary.outer is not None:
@@ -429,12 +403,12 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             sim.dust._rhs[-Nm_s:] = sim.dust.boundary.outer.value
         # Constant value
         elif sim.dust.boundary.outer.condition == "const_val":
-            dat[-2*Nm_s:-Nm_s] = 1./dt
+            dat_out[-2*Nm_s:-Nm_s] = 1./dt
             sim.dust._rhs[-Nm_s:] = 0.
         # Given gradient
         elif sim.dust.boundary.outer.condition == "grad":
             KNrm2 = -r[-2]/r[-1]
-            dat[-2*Nm_s:-Nm_s] = -KNrm2/dt
+            dat_out[-2*Nm_s:-Nm_s] = -KNrm2/dt
             sim.dust._rhs[-Nm_s:] = ri[-2]/r[-1] * \
                 (r[-1]-r[-2])*sim.dust.boundary.outer.value
         # Constant gradient
@@ -442,8 +416,8 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             Do = ri[-2]/ri[-3] * (r[-1]-r[-2]) / (r[-2]-r[-3])
             KNrm2 = - r[-2]/r[-1] * (1. + Do)
             KNrm3 = r[-3]/r[-1] * Do
-            dat[-2*Nm_s:-Nm_s] = -KNrm2/dt
-            dat[-3*Nm_s:-2*Nm_s] = -KNrm3/dt
+            dat_out[-2*Nm_s:-Nm_s] = -KNrm2/dt
+            dat_out[-3*Nm_s:-2*Nm_s] = -KNrm3/dt
             sim.dust._rhs[-Nm_s:] = 0.
         # Given power law
         elif sim.dust.boundary.outer.condition == "pow":
@@ -454,18 +428,23 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             p = np.log(sim.dust.Sigma[-2] /
                        sim.dust.Sigma[-3]) / np.log(r[-2]/r[-3])
             KNrm2 = - (r[-1]/r[-2])**p
-            dat[-2*Nm_s:-Nm_s] = -KNrm2/dt
+            dat_out[-2*Nm_s:-Nm_s] = -KNrm2/dt
             sim.dust._rhs[-Nm_s:] = 0.
 
-    # Creating sparce matrix for outer boundary
+    # Stitching together the generators
+    row = np.hstack((row_coag, row_hyd, row_in, row_out))
+    col = np.hstack((col_coag, col_hyd, col_in, col_out))
+    dat = np.hstack((dat_coag, dat_hyd, dat_in, dat_out))
     gen = (dat, (row, col))
-    J_out = sp.csc_matrix(
+    # Building sparse matrix of coagulation Jacobian
+    J = sp.csc_matrix(
         gen,
         shape=(Ntot, Ntot)
     )
 
     # Adding and returning all matrix components
-    return J_in + J_coag + J_hyd + J_out
+    return J
+
 
 
 def a(sim):
@@ -481,6 +460,7 @@ def a(sim):
     a : Field
         Particle sizes"""
     return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.xi.calc, sim.grid._Nm_long)
+
 
 
 def F_adv(sim, Sigma=None):
@@ -502,6 +482,7 @@ def F_adv(sim, Sigma=None):
     if Sigma is None:
         Sigma = sim.dust.Sigma
     return dust_f.fi_adv(Sigma, sim.dust.v.rad, sim.grid.r, sim.grid.ri)
+
 
 
 def F_diff(sim, Sigma=None):
@@ -553,6 +534,7 @@ def F_tot(sim, Sigma=None):
     return Fi
 
 
+
 def m(sim):
     """Function calculates the particle mass from the particle sizes.
 
@@ -566,6 +548,7 @@ def m(sim):
     m : Field
         Particle masses"""
     return dust_f.calculate_m(sim.dust.a, sim.dust.rhos, sim.dust.fill)
+
 
 
 def p_frag(sim):
@@ -583,6 +566,7 @@ def p_frag(sim):
     pf : Field
         Fragmentation propability."""
     return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag)
+
 
 
 def p_stick(sim):
@@ -605,6 +589,7 @@ def p_stick(sim):
     return p
 
 
+
 def rho_midplane(sim):
     """Function calculates the midplane mass density.
 
@@ -619,6 +604,7 @@ def rho_midplane(sim):
         Midplane mass density"""
     # The scale height H has a longer shape than Sigma and has to be adjusted
     return sim.dust.Sigma / (np.sqrt(2 * c.pi) * sim.dust.H[:, :2])
+
 
 
 def smax_deriv(sim, t, smax):
@@ -649,6 +635,7 @@ def smax_deriv(sim, t, smax):
         smax,
         sim.dust.v.frag
     )
+
 
 
 def S_coag(sim, Sigma=None):
@@ -683,6 +670,7 @@ def S_coag(sim, Sigma=None):
     )
 
 
+
 def S_tot(sim, Sigma=None):
     """Function calculates the total source terms.
 
@@ -712,6 +700,7 @@ def S_tot(sim, Sigma=None):
     return Scoag + Shyd + Sext
 
 
+
 def vrel_brownian_motion(sim):
     """Function calculates the relative particle velocities due to Brownian motion.
     The maximum value is set to the sound speed.
@@ -728,6 +717,7 @@ def vrel_brownian_motion(sim):
     return dust_f.vrel_brownian_motion(sim.gas.cs, sim.dust.m, sim.gas.T)
 
 
+
 def xicalc(sim):
     """Function calculates the exponent of the distribution.
 
@@ -741,6 +731,7 @@ def xicalc(sim):
     xicalc : Field
         Calculated exponent of distribution"""
     return dust_f.calculate_xi(sim.dust.s.min, sim.dust.s.max, sim.dust.Sigma)
+
 
 
 def Y_jacobian(sim, x, dx=None, *args, **kwargs):
@@ -806,6 +797,7 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
     sim.dust._Y_rhs[:] = np.hstack((Sigma_rhs, smaxSig_rhs))
 
     return J
+
 
 
 def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
