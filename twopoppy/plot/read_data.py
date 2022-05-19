@@ -148,7 +148,7 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
     # Calculation of Stokes Number over mass grid
     ai = np.zeros((int(Nt), int(Nr_len), int(Nmi)))
     for i in range(int(Nt)):
-        ai[i] = np.full((int(Nr_len), int(Nmi)), 3 / (4 * np.pi * rho[i, 0, 0]) * mi[i, :] ** (1 / 3))
+        ai[i] = np.full((int(Nr_len), int(Nmi)), (3 / (4 * np.pi * rho[i, 0, 0]) * mi[i, :]) ** (1 / 3))
     Sti = np.zeros((int(Nt), int(Nr_len), int(Nmi)))
     for i in range(int(Nt)):
         Sti[i] = dp_dust_f.st_epstein_stokes1(ai[i], mfp[i], rho[i], SigmaGas[i])
