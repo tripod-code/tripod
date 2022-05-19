@@ -346,7 +346,7 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out3:
-        def plot3(it):
+        def plot3(it, ir, im):
 
             width = 6.
             height = width / golden
@@ -384,7 +384,7 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out4:
-        def plot4(it, im, ir):
+        def plot4(it, ir, im):
             width = 6.
             height = width / golden
             fig = plt.figure(dpi=150., figsize=(width, height))
@@ -407,7 +407,7 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out5:
-        def plot5(it, ir):
+        def plot5(it, ir, im):
 
             width = 6.
             height = width / golden
