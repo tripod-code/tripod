@@ -331,7 +331,7 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
                              0.75 * width,
                              0.02], facecolor="lightgoldenrodyellow")
     sliderMass = Slider(axSliderMass, "Mass", 0,
-                        data.Nmi[it, ir] - 1, valinit=im, valfmt="%i")
+                        data.Nmi[it] - 1, valinit=im, valfmt="%i")
     axSliderMass.set_title("m = {:9.3e} g".format(data.mi[it, ir, im]))
     fig._widgets += [sliderMass]
 
