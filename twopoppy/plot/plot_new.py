@@ -63,7 +63,7 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
 
         # Density distribution
         plt00 = ax00.contourf(data.r[it, ...] / c.au,
-                              data.mi[it, ...],
+                              data.mi[it, ir, ...],
                               np.log10(data.sigmaDusti[it, ...].T),
                               levels=levels,
                               cmap="magma",
@@ -71,7 +71,7 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
                               )
         if show_St1:
             ax00.contour(data.r[it, ...] / c.au,
-                         data.mi[it, ...],
+                         data.mi[it, ir, ...],
                          data.Sti[it, ...].T,
                          levels=[1.],
                          colors="white",
@@ -79,21 +79,21 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
                          )
         if show_limits:
             ax00.contour(data.r[it, ...] / c.au,
-                         data.mi[it, ...],
+                         data.mi[it, ir, ...],
                          (data.Sti - data.StDr[..., None])[it, ...].T,
                          levels=[0.],
                          colors="C2",
                          linewidths=1
                          )
             ax00.contour(data.r[it, ...] / c.au,
-                         data.mi[it, ...],
+                         data.mi[it, ir, ...],
                          (data.Sti - data.StFr[..., None])[it, ...].T,
                          levels=[0.],
                          colors="C0",
                          linewidths=1
                          )
 
-        ax00.axhline(data.mi[it, im], color="#AAAAAA", lw=1, ls="--")
+        ax00.axhline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
         ax00.axvline(data.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
 
         cbar00 = plt.colorbar(plt00, ax=ax00)
@@ -118,8 +118,8 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
         fig = plt.figure(dpi=150., figsize=(width, height))
         ax01 = fig.add_subplot(111)
 
-        ax01.loglog(data.mi[it, ...], data.sigmaDusti[it, ir, :], c="C3")
-        ax01.set_xlim(data.mi[it, 0], data.mi[it, -1])
+        ax01.loglog(data.mi[it, ir, ...], data.sigmaDusti[it, ir, :], c="C3")
+        ax01.set_xlim(data.mi[it, ir, 0], data.mi[it, ir, -1])
         ax01.set_ylim(10. ** (sd_max - 6.), 10. ** sd_max)
         ax01.set_xlabel("Particle mass [g]")
         ax01.set_ylabel("$\sigma_\mathrm{d}$ [g/cm²]")
@@ -289,7 +289,7 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
 
             # Density distribution
             plt00 = ax00.contourf(data.r[it, ...] / c.au,
-                                  data.mi[it, ...],
+                                  data.mi[it, ir, ...],
                                   np.log10(data.sigmaDusti[it, ...].T),
                                   levels=levels,
                                   cmap="magma",
@@ -297,7 +297,7 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                                   )
             if show_St1:
                 ax00.contour(data.r[it, ...] / c.au,
-                             data.mi[it, ...],
+                             data.mi[it, ir, ...],
                              data.Sti[it, ...].T,
                              levels=[1.],
                              colors="white",
@@ -305,20 +305,20 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                              )
             if show_limits:
                 ax00.contour(data.r[it, ...] / c.au,
-                             data.mi[it, ...],
+                             data.mi[it, ir, ...],
                              (data.Sti - data.StDr[..., None])[it, ...].T,
                              levels=[0.],
                              colors="C2",
                              linewidths=1
                              )
                 ax00.contour(data.r[it, ...] / c.au,
-                             data.mi[it, ...],
+                             data.mi[it, ir, ...],
                              (data.Sti - data.StFr[..., None])[it, ...].T,
                              levels=[0.],
                              colors="C0",
                              linewidths=1
                              )
-            ax00.axhline(data.mi[it, im], color="#AAAAAA", lw=1, ls="--")
+            ax00.axhline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
             ax00.axvline(data.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
 
             cbar00 = plt.colorbar(plt00, ax=ax00)
@@ -347,9 +347,9 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
             fig = plt.figure(dpi=150., figsize=(width, height))
             ax01 = fig.add_subplot(111)
 
-            ax01.loglog(data.mi[it, ...], data.sigmaDusti[it, ir, :], c="C3")
-            ax01.axvline(data.mi[it, im], color="#AAAAAA", lw=1, ls="--")
-            ax01.set_xlim(data.mi[it, 0], data.mi[it, -1])
+            ax01.loglog(data.mi[it, ir, ...], data.sigmaDusti[it, ir, :], c="C3")
+            ax01.axvline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
+            ax01.set_xlim(data.mi[it, ir, 0], data.mi[it, ir, -1])
             ylim1 = np.ceil(np.log10(np.max(data.sigmaDusti[it, ir, :])))
             ylim0 = ylim1 - 6.
             ax01.set_ylim(10. ** ylim0, 10. ** ylim1)

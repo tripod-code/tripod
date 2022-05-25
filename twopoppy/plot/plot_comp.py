@@ -70,7 +70,7 @@ def panel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0,
         fig = plt.figure(dpi=150., figsize=(width, height))
         ax01 = fig.add_subplot(111)
 
-        ax01.loglog(data_tpp.mi[it, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
+        ax01.loglog(data_tpp.mi[it, ir, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
         ax01.loglog(data_dp.m[it, ...], data_dp.sigmaDust[it, ir, :], c="C6", label="dp")
         ax01.set_xlim(data_dp.m[it, 0], data_dp.m[it, -1])
         ax01.set_ylim(10. ** (sd_max - 6.), 10. ** sd_max)
@@ -244,7 +244,7 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig = plt.figure(dpi=150., figsize=(width, height))
             ax01 = fig.add_subplot(111)
 
-            ax01.loglog(data_tpp.mi[it, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
+            ax01.loglog(data_tpp.mi[it, ir, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
             ax01.loglog(data_dp.m[it, ...], data_dp.sigmaDust[it, ir, :], c="C6", label="dp")
             ax01.axvline(data_dp.m[it, im], color="#AAAAAA", lw=1, ls="--")
             ax01.set_xlim(data_dp.m[it, 0], data_dp.m[it, -1])
