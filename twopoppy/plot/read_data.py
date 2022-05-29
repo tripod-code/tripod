@@ -99,7 +99,7 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
     Nmi_len = Nmi[0]
     Nr_len = Nr[0]
 
-    mi = np.logspace(np.log10(mmin_ini), np.log10(mmax_ini), num=Nmi_len, base=10.)
+    mi = np.logspace(np.log10(mmin_ini), np.log10(mmax_ini), num=int(Nmi_len), base=10.)
     mi = np.full((int(Nt), int(Nr_len), int(Nmi_len)), mi)
 
     # Assumption: Particles of all sizes have same mass density
