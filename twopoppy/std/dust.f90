@@ -268,7 +268,6 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
     integer, intent(in) :: Nm
 
     double precision :: dum
-    double precision :: fac
     integer :: ir
     integer :: i
     integer :: j
@@ -276,8 +275,8 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
     do i = 1, Nm
         do j = 1, i
             do ir = 2, Nr - 1
-                dum = (vfrag(ir) / vrel(ir, j, i))**2
-                pf(ir, j, i) = (1.5d0 * dum + 1.d0) * exp(-1.5d0 * dum)
+                dum = 5.d0 * (vrel(ir, j, i) / vfrag(ir)) - 4.d0
+                pf(ir, j, i) = max(0.d0, min(1.d0, dum))
                 pf(ir, i, j) = pf(ir, j, i)
             end do
         end do
