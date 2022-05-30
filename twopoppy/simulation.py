@@ -46,7 +46,7 @@ class Simulation(dp.Simulation):
         # Adding new elements to update order in a relative way
         def addelemtafter(lst, elem, after):
             idx = lst.index(after)
-            lst.insert(idx+1, elem)
+            lst.insert(idx + 1, elem)
 
         # Adjusting the updater of main simulation frame
         updtordr = self.dust.updateorder
@@ -64,27 +64,29 @@ class Simulation(dp.Simulation):
         self.dust.updater = updtordr
 
         # Deleting Fields that are not needed
-        del(self.ini.grid.Nmbpd)
-        del(self.ini.grid.mmin)
-        del(self.ini.grid.mmax)
-        del(self.ini.dust.erosionMassRatio)
-        del(self.ini.dust.excavatedMass)
-        del(self.ini.dust.fragmentDistribution)
-        del(self.dust.coagulation)
-        del(self.dust.kernel)
-        del(self.grid.m)
-        del(self.grid.Nm)
+        del self.ini.grid.Nmbpd
+        del self.ini.grid.mmin
+        del self.ini.grid.mmax
+        del self.ini.dust.erosionMassRatio
+        del self.ini.dust.excavatedMass
+        del self.ini.dust.fragmentDistribution
+        del self.dust.coagulation
+        del self.dust.kernel
+        del self.grid.m
+        del self.grid.Nm
 
         # TODO: Managing the self.ini object
 
     # Note: the next two functions are to hide methods from DustPy that are not used in TwoPopPy
     def __dir__(self):
-        '''This function hides all attributes in _excludefromparten from inherited DustPy object. It is only hiding them. They can still be accessed.'''
+        '''This function hides all attributes in _excludefromparten from inherited DustPy object.
+        It is only hiding them. They can still be accessed.'''
         exclude = set(self._excludefromdustpy) - set(self.__dict__.keys())
         return sorted((set(dir(self.__class__)) | set(self.__dict__.keys())) - exclude)
 
     def __getattribute__(self, name):
-        '''This function raises an attribute error for elements that should not be inherited from DustPy if they were not manually set in TwoPopPy.'''
+        '''This function raises an attribute error for elements that should not be inherited from DustPy if they
+        were not manually set in TwoPopPy.'''
         in_tp = name in super(
             dp.Simulation, self).__getattribute__("__dict__")
         in_dp = name in dp.Simulation.__dict__
@@ -111,8 +113,8 @@ class Simulation(dp.Simulation):
         Notes
         -----
         The grids are set up with the parameters given in ``Simulation.ini``.
-        If you want to have a custom radial grid you have to set the array of grid cell interfaces ``Simulation.grid.ri``,
-        before calling ``Simulation.makegrids()``.'''
+        If you want to have a custom radial grid you have to set the array of grid cell interfaces
+        ``Simulation.grid.ri``, before calling ``Simulation.makegrids()``.'''
 
         # Number of mass species. Hard coded.
         # The surface densities have Nm_short particle species.
@@ -145,7 +147,7 @@ class Simulation(dp.Simulation):
             ri = self.grid.ri
             Nr = ri.shape[0] - 1
         r = 0.5 * (ri[:-1] + ri[1:])
-        A = np.pi * (ri[1:]**2 - ri[:-1]**2)
+        A = np.pi * (ri[1:] ** 2 - ri[:-1] ** 2)
         self.grid.addfield(
             "Nr", Nr, description="# of radial grid cells", constant=True)
         self.grid.addfield(
@@ -307,12 +309,12 @@ class Simulation(dp.Simulation):
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
                 shape3), description="Fragmentation probability"
-            )
+                                     )
             self.dust.p.frag.updater = std.dust.p_frag
         if self.dust.p.stick is None:
             self.dust.p.stick = Field(self, np.zeros(
                 shape3), description="Sticking probability"
-            )
+                                      )
             self.dust.p.stick.updater = std.dust.p_stick
         # Source terms
         if self.dust.S.ext is None:
@@ -426,12 +428,6 @@ class Simulation(dp.Simulation):
             )
         self.dust.s.max.differentiator = std.dust.smax_deriv
 
-        # Calculate particle sizes and masses which could not be initialized at this point of the simulation
-        self.dust.a = std.dust_f.calculate_a(
-            self.dust.s.min, self.dust.s.max, self.dust.xi.calc, self.grid._Nm_long)
-        self.dust.m = std.dust_f.calculate_m(
-            self.dust.a, self.dust.rhos, self.dust.fill)
-
         # Floor value
         if self.dust.SigmaFloor is None:
             # TODO: What is a reasonable value for this in TwoPopPy
@@ -439,6 +435,7 @@ class Simulation(dp.Simulation):
             self.dust.addfield(
                 "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]"
             )
+
         # Surface density, if not set
         if self.dust.Sigma is None:
             Sigma = std.dust.Sigma_initial(self)
@@ -462,15 +459,15 @@ class Simulation(dp.Simulation):
         # The right-hand side of the matrix equation is stored in a hidden field
         self.dust._rhs = Field(self, np.zeros(
             shape2Sigmaravel), description="Right-hand side of matrix equation [g/cm²]"
-        )
+                               )
         # State vector
-        self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short)+1)*int(self.grid.Nr)),
+        self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
                            description="State vector for integration")
         self.dust._Y.jacobinator = std.dust.Y_jacobian
         # The right-hand side of the state vector matrix equation is stored in a hidden field
         self.dust._Y_rhs = Field(self, np.zeros_like(
             self.dust._Y), description="Right-hand side of state vector matrix equation"
-        )
+                                 )
         # Boundary conditions
         if self.dust.boundary.inner is None:
             self.dust.boundary.inner = dp.utils.Boundary(
