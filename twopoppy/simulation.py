@@ -65,7 +65,6 @@ class Simulation(dp.Simulation):
 
         # Deleting Fields that are not needed
         del self.ini.grid.Nmbpd
-        del self.ini.grid.mmin
         del self.ini.grid.mmax
         del self.ini.dust.erosionMassRatio
         del self.ini.dust.excavatedMass
@@ -407,7 +406,8 @@ class Simulation(dp.Simulation):
             )
         # Specific particle sizes
         if self.dust.s.min is None:
-            smin = 0.1 * self.ini.dust.aIniMax * np.ones(shape1)
+            rho = self.dust.rhos[:, 0] * self.dust.fill[:, 0]
+            smin = (3. * self.ini.grid.mmin / (4. * np.pi * rho))
             self.dust.s.addfield(
                 "min", smin, description="Minimum particle size"
             )
