@@ -306,7 +306,7 @@ def powerlaw_extrapolation(sigma_d, s_max, xi, rhos, fill, sigma_g, mfp, nmbpd=7
             if m_max[it, ir] <= mmin:
                 sig_dm[it, ir, 0] = 1.
             else:
-                i_up = np.where(m_i[it] < m_max[it, ir])[0][-1]
+                i_up = np.where(m_i[it, ir] < m_max[it, ir])[0][-1]
                 # filling all bins that are strictly below m_max
                 if xi[it, ir] == 4.0:
                     for im in range(i_up):
