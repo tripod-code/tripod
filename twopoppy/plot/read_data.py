@@ -299,7 +299,7 @@ def powerlaw_extrapolation(sigma_d, s_max, xi, rhos, fill, sigma_g, mfp, nmbpd=7
     rho = rhos * fill
     rho_i = np.full((nt, nr, nm), rho[0, 0, 0])
 
-    m_max = 4. / 3. * np.pi * rho_i * s_max ** 3.
+    m_max = 4. / 3. * np.pi * rho_i[:, :, 0] * s_max ** 3.
 
     for it in range(nt):
         for ir in range(nr):
