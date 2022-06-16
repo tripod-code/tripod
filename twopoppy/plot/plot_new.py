@@ -92,6 +92,20 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
                          colors="C0",
                          linewidths=1
                          )
+            ax00.contour(data.r[it, ...] / c.au,
+                         data.mi[it, ir, ...],
+                         (data.Sti - data.StDf[..., None])[it, ...].T,
+                         levels=[0.],
+                         colors="cyan",
+                         linewidths=1
+                         )
+            ax00.contour(data.r[it, ...] / c.au,
+                         data.mi[it, ir, ...],
+                         (data.Sti - data.StMax[..., None])[it, ...].T,
+                         levels=[0.],
+                         colors="yellow",
+                         linewidths=1
+                         )
 
         ax00.axhline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
         ax00.axvline(data.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")

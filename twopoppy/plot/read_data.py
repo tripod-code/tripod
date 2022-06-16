@@ -115,6 +115,16 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
                        np.diff(pi) / np.diff(ri[i, ...]))
         StDr[i, ...] = eps[i, ...] / gamma * (vK[i, ...] / cs[i, ...]) ** 2
 
+    # Drift fragmentation limit
+    N = 0.5
+    StDf = vFrag * vK / (gamma * cs ** 2 * (1 - N))
+
+    # Stokes of maximum particle size
+    StMax = np.zeros_like(StFr)
+    rho = rhos * fill
+    for i in range(int(Nt)):
+        StMax[i] = dp_dust_f.st_epstein_stokes1(smax[i], mfp[i], rho[i, :, 0], SigmaGas[i])
+
     ret["mi"] = mi
     ret["Nmi"] = Nmi
     ret["r"] = r
@@ -137,6 +147,8 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
     ret["Sti"] = Sti
     ret["StDr"] = StDr
     ret["StFr"] = StFr
+    ret["StDf"] = StDf
+    ret["StMax"] = StMax
     ret["vK"] = vK
     ret["vFrag"] = vFrag
 
