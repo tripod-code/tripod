@@ -689,7 +689,36 @@ def vrel_brownian_motion(sim):
     -------
     vrel : Field
         Relative velocities"""
-    return dust_f.vrel_brownian_motion(sim.gas.cs, sim.dust.m, sim.gas.T)
+    m_var = sim.dust.m * sim.dust.vega.brown**3.
+    return dust_f.vrel_brownian_motion(sim.gas.cs, m_var, sim.gas.T)
+
+
+def vrel_turbulent_motion(sim):
+    """Function calculates the relative particle velocities due to turbulent motion.
+    It uses the prescription of Cuzzi & Ormel (2007).
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    vrel : Field
+        Relative velocities"""
+
+    rho = sim.dust.rhos * sim.dust.fill
+    a_var = sim.dust.a * sim.dust.vega.turb
+    St_var = dp_dust_f.st_epstein_stokes1(a_var, sim.gas.mfp, rho, sim.gas.Sigma)
+
+    return dust_f.vrel_cuzzi_ormel_2007(
+        sim.dust.delta.turb,
+        sim.gas.cs,
+        sim.gas.mu,
+        sim.grid.OmegaK,
+        sim.gas.Sigma,
+        sim.dust.St,
+        St_var)
 
 
 def xicalc(sim):

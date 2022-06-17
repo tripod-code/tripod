@@ -78,7 +78,7 @@ subroutine calculate_a(smin, smax, xi, mfp, fluxavg, a, Nr, Nm)
             a(i, 3) = 0.5d0 * a(i, 4)
         end do
 
-    ! Mass-averaged particle sizes
+        ! Mass-averaged particle sizes
     else
         do i = 1, Nr
             if(smin(i) == smax(i)) then
@@ -374,6 +374,165 @@ subroutine vrel_brownian_motion(cs, m, T, vrel, Nr, Nm)
     end do
 
 end subroutine vrel_brownian_motion
+
+
+subroutine vrel_cuzzi_ormel_2007(alpha, cs, mump, OmegaK, SigmaGas, St, Stvar, vrel, Nr, Nm)
+    ! Subroutine calculates the relative particle velocities due to turbulent motion
+    ! accourding the prescription of Cuzzi & Ormel (2007).
+    !
+    ! Parameters
+    ! ----------
+    ! alpha(Nr) : Turbulent alpha parameters
+    ! cs(Nr) : Sound speed
+    ! mump(Nr) : Mean molecular weight of the gas
+    ! OmegaK(Nr) : Keplerian frequency
+    ! SigmaGas(Nr) : Gas surface density
+    ! St(Nr, Nm) : Stokes number
+    ! Stvar(Nr, Nm) : Stokes number after particle size variation
+    ! Nr : Number of radial grid cells
+    ! Nm : Number of mass bins
+    !
+    ! Returns
+    ! -------
+    ! vrel(Nr, Nm) : Relative velocities
+
+    use constants, only : sigma_H2
+
+    implicit none
+
+    double precision, intent(in) :: alpha(Nr)
+    double precision, intent(in) :: cs(Nr)
+    double precision, intent(in) :: mump(Nr)
+    double precision, intent(in) :: OmegaK(Nr)
+    double precision, intent(in) :: SigmaGas(Nr)
+    double precision, intent(in) :: St(Nr, Nm)
+    double precision, intent(in) :: Stvar(Nr, Nm)
+    double precision, intent(out) :: vRel(Nr, Nm, Nm)
+    integer, intent(in) :: Nr
+    integer, intent(in) :: Nm
+
+    double precision :: eps(Nr, Nm, Nm)
+    double precision :: OmKinv(Nr)
+    double precision :: Re
+    double precision :: ReInvSqrt(Nr)
+    double precision :: StL(Nr, Nm, Nm)
+    double precision :: StS(Nr, Nm, Nm)
+    double precision :: StLvar(Nr, Nm, Nm)
+    double precision :: StSvar(Nr, Nm, Nm)
+    double precision :: tauL(Nr, Nm, Nm)
+    double precision :: tauS(Nr, Nm, Nm)
+    double precision :: ts(Nr)
+    double precision :: vg2(Nr)
+    double precision :: vn
+    double precision :: vs(Nr)
+
+    double precision :: c0, c1, c2, c3, ya, yap1inv
+    double precision :: h1(Nr, Nm, Nm)
+    double precision :: h2(Nr, Nm, Nm)
+    double precision :: ys(Nr, Nm, Nm)
+
+    integer :: ir, i, j
+    double precision :: dum
+
+    c0 = 1.6015125d0
+    c1 = -0.63119577d0
+    c2 = 0.32938936d0
+    c3 = -0.29847604d0
+    ya = 1.6d0
+    yap1inv = 1.d0 / (1.d0 + ya)
+
+    do ir = 1, Nr
+        OmKinv(ir) = 1.d0 / OmegaK(ir)
+        Re = 0.5d0 * alpha(ir) * SigmaGas(ir) * sigma_H2 / mump(ir)
+        ReInvSqrt(ir) = sqrt(1.d0 / Re)
+        vn = sqrt(alpha(ir)) * cs(ir)
+        vs(ir) = Re**(-0.25) * vn
+        ts(ir) = OmKinv(ir) * ReInvSqrt(ir)
+        vg2(ir) = 1.5d0 * vn**2
+    end do
+
+    do i = 1, Nm
+        do j = 1, i
+            do ir = 1, Nr
+                StL(ir, j, i) = max(St(ir, j), St(ir, i))
+                StS(ir, j, i) = min(St(ir, j), St(ir, i))
+                StLvar(ir, j, i) = max(Stvar(ir, j), Stvar(ir, i))
+                StSvar(ir, j, i) = min(Stvar(ir, j), Stvar(ir, i))
+                eps(ir, j, i) = StS(ir, j, i) / StL(ir, j, i)
+
+                tauL(ir, j, i) = StL(ir, j, i) * OmKinv(ir)
+                tauS(ir, j, i) = StS(ir, j, i) * OmKinv(ir)
+
+                ys(ir, j, i) = c0 + c1 * StL(ir, j, i) + c2 * StL(ir, j, i)**2 &
+                        & + c3 * StL(ir, j, i)**3
+
+                h1(ir, j, i) = (StL(ir, j, i) - StS(ir, j, i))                 &
+                        & / (StL(ir, j, i) + StS(ir, j, i))                          &
+                        & * (StL(ir, j, i) * yap1inv                                 &
+                                & - StS(ir, j, i)**2 / (StS(ir, j, i) + ya * StL(ir, j, i)))
+                h2(ir, j, i) = 2.d0 * (ya * StL(ir, j, i) - ReInvSqrt(ir))     &
+                        & + StL(ir, j, i) * yap1inv                                     &
+                        & - StL(ir, j, i)**2 / (StL(ir, j, i) + ReInvSqrt(ir))       &
+                        & + StS(ir, j, i)**2 / (ya * StL(ir, j, i) + StS(ir, j, i))  &
+                        & - StS(ir, j, i)**2 / (StS(ir, j, i) + ReInvSqrt(ir))
+            end do
+        end do
+    end do
+
+    do i = 1, Nm
+        do j = 1, i
+
+            where(tauL(:, j, i) < 0.2d0 * ts(:))
+
+                vRel(:, j, i) = 1.5d0 * (vs(:) / ts(:) &
+                        & * (tauL(:, j, i) - tauS(:, j, i)))**2
+
+            elsewhere(tauL(:, j, i) * ya < ts(:))
+
+                vRel(:, j, i) = vg2(:) * (StL(:, j, i) - StS(:, j, i)) &
+                        & / (StL(:, j, i) + StS(:, j, i)) * (StL(:, j, i)**2 &
+                        & / (StL(:, j, i) + ReInvSqrt(:))                    &
+                        & - StS(:, j, i)**2 / (StS(:, j, i) + ReInvSqrt(:)))
+
+            elsewhere(tauL(:, j, i) < 5.d0 * ts(:))
+
+                vRel(:, j, i) = vg2(:) * (h1(:, j, i) + h2(:, j, i))
+
+            elsewhere(tauL(:, j, i) < 0.2d0 * OmKinv(:))
+
+                vRel(:, j, i) = vg2(:) * StL(:, j, i)                             &
+                        & * (2.d0 * ya - 1.d0 - eps(:, j, i) + 2.d0 / (1.d0 + eps(:, j, i)) &
+                                & * (yap1inv + eps(:, j, i)**3 / (ya + eps(:, j, i))))
+
+            elsewhere(tauL(:, j, i) < OmKinv(:))
+
+                vRel(:, j, i) = vg2(:) * StL(:, j, i)                  &
+                        & * (2.d0 * ys(:, j, i) - 1.d0 - eps(:, j, i)           &
+                                & + 2.d0 / (1.d0 + eps(:, j, i)) * (1.d0 / (1.d0 + ys(:, j, i)) &
+                                        & + eps(:, j, i)**3 / (ys(:, j, i) + eps(:, j, i))))
+
+                ! Turbulence regime II
+            elsewhere(tauL(:, j, i) >= OmKinv(:))
+                vRel(:, j, i) = vg2(:) &
+                        & * (2.d0 + StLvar(:, j, i) + StSvar(:, j, i)) &
+                        & / (1.d0 + StLvar(:, j, i) + StSvar(:, j, i) + StLvar(:, j, i) * StSvar(:, j, i))
+
+            end where
+
+        end do
+    end do
+
+    do i = 1, Nm
+        do j = 1, i
+            do ir = 1, Nr
+                dum = sqrt(vRel(ir, j, i))
+                vRel(ir, j, i) = dum
+                vRel(ir, i, j) = dum
+            end do
+        end do
+    end do
+
+end subroutine vrel_cuzzi_ormel_2007
 
 
 subroutine calculate_xi(smin, smax, Sigma, xicalc, Nr, Nm)
