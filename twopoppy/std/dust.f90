@@ -524,9 +524,9 @@ subroutine vrel_cuzzi_ormel_2007(alpha, cs, mump, OmegaK, SigmaGas, St, Stvar, v
             elsewhere(tauL(:, j, i) < OmKinv(:))
 
                 vRel(:, j, i) = vg2(:) * StLvar(:, j, i)                  &
-                        & * (2.d0 * ys(:, j, i) - 1.d0 - epsvar(:, j, i)           &
-                                & + 2.d0 / (1.d0 + epsvar(:, j, i)) * (1.d0 / (1.d0 + ys(:, j, i)) &
-                                        & + epsvar(:, j, i)**3 / (ys(:, j, i) + epsvar(:, j, i))))
+                        & * (2.d0 * ysvar(:, j, i) - 1.d0 - epsvar(:, j, i)           &
+                                & + 2.d0 / (1.d0 + epsvar(:, j, i)) * (1.d0 / (1.d0 + ysvar(:, j, i)) &
+                                        & + epsvar(:, j, i)**3 / (ysvar(:, j, i) + epsvar(:, j, i))))
 
                 ! Turbulence regime II
             elsewhere(tauL(:, j, i) >= OmKinv(:))
