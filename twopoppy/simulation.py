@@ -40,7 +40,7 @@ class Simulation(dp.Simulation):
         self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
-        self.dust.fluxavg = None
+        self.dust.avgmode = None
         self.dust.tranf = None
         self.dust.addgroup("vega", description="Particle size variation factors for relative velocities")
         self.dust.vega.brown = None
@@ -417,10 +417,10 @@ class Simulation(dp.Simulation):
                 "min", smin, description="Minimum particle size"
             )
         # Averaging mode for size calculations
-        if self.dust.fluxavg is None:
-            fluxavg = True  # True / false for flux / mass averaging in particle size calculation
+        if self.dust.avgmode is None:
+            avgmode = "flux"  # Options: flux, mass
             self.dust.addfield(
-                "fluxavg", fluxavg, description="Averaging mode for size calculation"
+                "avgmode", avgmode, description="Averaging mode for size calculation"
             )
         # Transition function between sticking and fragmentation
         if self.dust.tranf is None:
