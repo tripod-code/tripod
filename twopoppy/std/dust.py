@@ -535,8 +535,8 @@ def m(sim):
 
 def p_frag(sim):
     """Function calculates the fragmentation probability.
-    It assumes a linear transition between sticking and
-    fragmentation.
+    The type of assumed transition between sticking and
+    fragmentation is given as an argument.
 
     Parameters
     ----------
@@ -546,8 +546,8 @@ def p_frag(sim):
     Returns
     -------
     pf : Field
-        Fragmentation propability."""
-    return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag)
+        Fragmentation probability."""
+    return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag, sim.dust.tranf)
 
 
 def p_stick(sim):
@@ -689,7 +689,7 @@ def vrel_brownian_motion(sim):
     -------
     vrel : Field
         Relative velocities"""
-    m_var = sim.dust.m * sim.dust.vega.brown**3.
+    m_var = sim.dust.m * sim.dust.vega.brown ** 3.
     return dust_f.vrel_brownian_motion(sim.gas.cs, m_var, sim.gas.T)
 
 

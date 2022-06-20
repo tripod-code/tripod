@@ -41,6 +41,7 @@ class Simulation(dp.Simulation):
         self.dust.s.min = None
         self.dust.s.max = None
         self.dust.fluxavg = None
+        self.dust.tranf = None
         self.dust.addgroup("vega", description="Particle size variation factors for relative velocities")
         self.dust.vega.brown = None
         self.dust.vega.turb = None
@@ -420,6 +421,12 @@ class Simulation(dp.Simulation):
             fluxavg = True  # True / false for flux / mass averaging in particle size calculation
             self.dust.addfield(
                 "fluxavg", fluxavg, description="Averaging mode for size calculation"
+            )
+        # Transition function between sticking and fragmentation
+        if self.dust.tranf is None:
+            tranf = "lin"  # Options: lin, sgm, pow, bel, exp, cos
+            self.dust.addfield(
+                "tranf", tranf, description="Transition function between sticking and fragmentation"
             )
         # Particle size variation factors
         if self.dust.vega.brown is None:

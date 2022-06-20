@@ -278,7 +278,7 @@ subroutine calculate_m(a, rhos, fill, masses, Nr, Nm)
 end subroutine calculate_m
 
 
-subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
+subroutine pfrag(vrel, vfrag, tranf, pf, Nr, Nm)
     ! Subroutine calculates the fragmentation probability.
     ! It is assuming a Maxwell-Boltzmann velocity distribution.
     !
@@ -286,6 +286,7 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
     ! ----------
     ! vrel(Nr, Nm, Nm) : Relative velocity
     ! vfrag(Nr) : Fragmentation velocity
+    ! tranf : Type of transition function
     ! Nr : Number or radial grid cells
     ! Nm : Number of mass bins
     !
@@ -303,6 +304,7 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
 
     double precision, intent(in) :: vrel(Nr, Nm, Nm)
     double precision, intent(in) :: vfrag(Nr)
+    character*3, intent(in) :: tranf
     double precision, intent(out) :: pf(Nr, Nm, Nm)
     integer, intent(in) :: Nr
     integer, intent(in) :: Nm
@@ -312,15 +314,73 @@ subroutine pfrag(vrel, vfrag, pf, Nr, Nm)
     integer :: i
     integer :: j
 
-    do i = 1, Nm
-        do j = 1, i
-            do ir = 2, Nr - 1
-                dum = 5.d0 * (vrel(ir, j, i) / vfrag(ir)) - 4.d0
-                pf(ir, j, i) = max(0.d0, min(1.d0, dum))
-                pf(ir, i, j) = pf(ir, j, i)
+    ! Linear
+    if(tranf == 'lin') then
+        do i = 1, Nm
+            do j = 1, i
+                do ir = 2, Nr - 1
+                    dum = 5.d0 * (vrel(ir, j, i) / vfrag(ir)) - 4.d0
+                    pf(ir, j, i) = max(0.d0, min(1.d0, dum))
+                    pf(ir, i, j) = pf(ir, j, i)
+                end do
             end do
         end do
-    end do
+        ! Standard sigmoid
+    else if(tranf == 'sgm') then
+        do i = 1, Nm
+            do j = 1, i
+                do ir = 2, Nr - 1
+                    dum = -50.d0 * (vrel(ir, j, i) / vfrag(ir) - 0.9d0)
+                    pf(ir, j, i) = 1.d0 / (1.d0 + exp(dum))
+                    pf(ir, i, j) = pf(ir, j, i)
+                end do
+            end do
+        end do
+        ! Power law
+    else if(tranf == 'pow') then
+        do i = 1, Nm
+            do j = 1, i
+                do ir = 2, Nr - 1
+                    dum = vfrag(ir) / vrel(ir, j, i) - 0.13d0
+                    pf(ir, j, i) = 0.5d0 * (1. - (dum**35.d0 - 1.d0) / (dum**35.d0 + 1.d0))
+                    pf(ir, i, j) = pf(ir, j, i)
+                end do
+            end do
+        end do
+        ! Bell
+    else if(tranf == 'bel') then
+        do i = 1, Nm
+            do j = 1, i
+                do ir = 2, Nr - 1
+                    dum = abs(min(1.d0, vrel(ir, j, i) / vfrag(ir)) - 1.d0)
+                    pf(ir, j, i) = exp(-100.d0 * dum**2.d0)
+                    pf(ir, i, j) = pf(ir, j, i)
+                end do
+            end do
+        end do
+        ! Exponential
+    else if(tranf == 'exp') then
+        do i = 1, Nm
+            do j = 1, i
+                do ir = 2, Nr - 1
+                    dum = abs(min(1.d0, vrel(ir, j, i) / vfrag(ir)) - 1.d0)
+                    pf(ir, j, i) = exp(-20.d0 * dum)
+                    pf(ir, i, j) = pf(ir, j, i)
+                end do
+            end do
+        end do
+        ! Cosine
+    else if(tranf == 'cos') then
+        do i = 1, Nm
+            do j = 1, i
+                do ir = 2, Nr - 1
+                    dum = max(pi / 2.d0, min(pi, pi * vrel(ir, j, i) / vfrag(ir)))
+                    pf(ir, j, i) = max(0.d0, -cos(3.d0 * dum))
+                    pf(ir, i, j) = pf(ir, j, i)
+                end do
+            end do
+        end do
+    end if
 
 end subroutine pfrag
 
