@@ -55,14 +55,12 @@ class Simulation(dp.Simulation):
 
         # Adjusting the updater of main simulation frame
         updtordr = self.dust.updateorder
-        # Add "s" after "fill"
-        addelemtafter(updtordr, "s", "fill")
-        # Add "xi" after "s"
-        addelemtafter(updtordr, "xi", "s")
+        # Add "xi" after "fill"
+        addelemtafter(updtordr, "xi", "fill")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
         # Add "SigmaFloor" after "m"
-        addelemtafter(updtordr, "SigmaFloor", "m")
+        # addelemtafter(updtordr, "SigmaFloor", "m")
         # Removing elements that are not used
         updtordr.remove("kernel")
         # Assign updateorder
