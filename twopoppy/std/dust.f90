@@ -603,16 +603,17 @@ subroutine vrel_cuzzi_ormel_2007(alpha, cs, mump, OmegaK, SigmaGas, St, Stvar, v
 end subroutine vrel_cuzzi_ormel_2007
 
 
-subroutine calculate_xi(smin, smax, Sigma, xicalc, Nr, Nm)
+subroutine calculate_xi(smin, smax, Sigma, SigmaFloor, xicalc, Nr, Nm)
     ! Subroutine calculates the exponent of the particle size distribution.
     !
     ! Parameters
     ! ----------
-    ! smin(Nr)      : Minimum particle size
-    ! smax(Nr)      : Maximum particle size
-    ! Sigma(Nr, Nm) : Dust surface density
-    ! Nr            : Number of radial grid cells
-    ! Nm            : Number of mass bins
+    ! smin(Nr)           : Minimum particle size
+    ! smax(Nr)           : Maximum particle size
+    ! Sigma(Nr, Nm)      : Dust surface density
+    ! SigmaFloor(Nr, Nm) : Floor value of dust surface density
+    ! Nr                 : Number of radial grid cells
+    ! Nm                 : Number of mass bins
     !
     ! Returns
     ! -------
@@ -623,6 +624,7 @@ subroutine calculate_xi(smin, smax, Sigma, xicalc, Nr, Nm)
     double precision, intent(in) :: smin(Nr)
     double precision, intent(in) :: smax(Nr)
     double precision, intent(in) :: Sigma(Nr, Nm)
+    double precision, intent(in) :: SigmaFloor(Nr, Nm)
     double precision, intent(out) :: xicalc(Nr)
     integer, intent(in) :: Nr
     integer, intent(in) :: Nm
@@ -634,6 +636,8 @@ subroutine calculate_xi(smin, smax, Sigma, xicalc, Nr, Nm)
 
     do i = 1, Nr
         if(smax(i) == sint(i)) then
+            xicalc(i) = -2.5d0
+        else if(SigmaFloor(i, 1) + SigmaFloor(i, 2) == Sigma(i, 1) + Sigma(i, 2)) then
             xicalc(i) = -2.5d0
         else
             xicalc(i) = max(-20.d0, min(15.d0, log(Sigma(i, 2) / Sigma(i, 1)) / log(smax(i) / sint(i)) - 4.d0))
@@ -829,7 +833,7 @@ subroutine s_coag(a, dv, H, m, pfrag, pstick, Sigma, smin, smax, xifrag, xistick
 end subroutine s_coag
 
 
-subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, dsmax, Nr, Nm)
+subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, SigmaFloor, dsmax, Nr, Nm)
     ! Subroutine calculates the derivative of the maximum particle size
     !
     ! Parameters
@@ -840,6 +844,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, dsmax, Nr, Nm)
     ! smin(Nr) : Minimum particle size
     ! smax(Nr) : Maximum particle size
     ! vfrag(Nr) : Fragmentation velocity
+    ! SigmaFloor(Nr, Nm) : Floor value of dust surface density
     ! Nr : Number of radial grid cells
     ! Nm : Number of mass bins (only a0 and a1)
     !
@@ -855,6 +860,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, dsmax, Nr, Nm)
     double precision, intent(in) :: smin(Nr)
     double precision, intent(in) :: smax(Nr)
     double precision, intent(in) :: vfrag(Nr)
+    double precision, intent(in) :: SigmaFloor(Nr, Nm)
     double precision, intent(out) :: dsmax(Nr)
     integer, intent(in) :: Nr
     integer, intent(in) :: Nm
@@ -886,6 +892,9 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, dsmax, Nr, Nm)
             f = 0.5d0 * (1.d0 + TANH(LOG10(smax(ir) / thr) / 3.d-2))
             if(smax(ir) <= smin(ir)) f = 0.d0
             dsmax(ir) = f * dsmax(ir)
+
+        else if(SigmaFloor(ir, 1) + SigmaFloor(ir, 2) == Sigma(ir, 1) + Sigma(ir, 2)) then
+            dsmax(ir) = 0.d0 * dsmax(ir)
 
         end if
 

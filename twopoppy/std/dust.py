@@ -612,7 +612,8 @@ def smax_deriv(sim, t, smax):
         sim.dust.rhos[:, :2],
         sim.dust.s.min,
         smax,
-        sim.dust.v.frag
+        sim.dust.v.frag,
+        sim.dust.SigmaFloor
     )
 
 
@@ -733,7 +734,7 @@ def xicalc(sim):
     -------
     xicalc : Field
         Calculated exponent of distribution"""
-    return dust_f.calculate_xi(sim.dust.s.min, sim.dust.s.max, sim.dust.Sigma)
+    return dust_f.calculate_xi(sim.dust.s.min, sim.dust.s.max, sim.dust.Sigma, sim.dust.SigmaFloor)
 
 
 def Y_jacobian(sim, x, dx=None, *args, **kwargs):
