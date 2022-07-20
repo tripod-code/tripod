@@ -833,7 +833,7 @@ subroutine s_coag(a, dv, H, m, pfrag, pstick, Sigma, smin, smax, xifrag, xistick
 end subroutine s_coag
 
 
-subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, SigmaFloor, dsmax, Nr, Nm)
+subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, dsmax, Nr, Nm)
     ! Subroutine calculates the derivative of the maximum particle size
     !
     ! Parameters
@@ -844,6 +844,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, SigmaFloor, dsmax, Nr, 
     ! smin(Nr) : Minimum particle size
     ! smax(Nr) : Maximum particle size
     ! vfrag(Nr) : Fragmentation velocity
+    ! Sigma(Nr, Nm) : Dust surface density
     ! SigmaFloor(Nr, Nm) : Floor value of dust surface density
     ! Nr : Number of radial grid cells
     ! Nm : Number of mass bins (only a0 and a1)
@@ -860,6 +861,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, SigmaFloor, dsmax, Nr, 
     double precision, intent(in) :: smin(Nr)
     double precision, intent(in) :: smax(Nr)
     double precision, intent(in) :: vfrag(Nr)
+    double precision, intent(in) :: Sigma(Nr, Nm)
     double precision, intent(in) :: SigmaFloor(Nr, Nm)
     double precision, intent(out) :: dsmax(Nr)
     integer, intent(in) :: Nr
