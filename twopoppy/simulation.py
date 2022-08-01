@@ -189,11 +189,6 @@ class Simulation(dp.Simulation):
         if self.integrator is None:
             instructions = [
                 Instruction(
-                    schemes.expl_1_euler,
-                    self.dust.s.max,
-                    description="smax: explicit 1st-order Euler"
-                ),
-                Instruction(
                     std.dust.impl_1_direct,
                     self.dust._Y,
                     controller={"rhs": self.dust._Y_rhs},
