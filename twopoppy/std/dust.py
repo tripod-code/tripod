@@ -636,7 +636,7 @@ def S_coag(sim, Sigma=None):
     if Sigma is None:
         Sigma = sim.dust.Sigma
 
-    return dust_f.s_coag(
+    s_coag = dust_f.s_coag(
         sim.dust.a[:, :2],
         sim.dust.v.rel.tot[:, :2, :2],
         sim.dust.H[:, :2],
@@ -649,6 +649,9 @@ def S_coag(sim, Sigma=None):
         sim.dust.xi.frag,
         sim.dust.xi.stick
     )
+
+    # Prevents unwanted growth of smax
+    return s_coag * np.where(sim.dust.Sigma.sum(-1) > sim.dust.SigmaFloor.sum(-1)[0], 1., 0.)[:, None]
 
 
 def S_tot(sim, Sigma=None):

@@ -730,8 +730,7 @@ subroutine jacobian_coagulation_generator(a, dv, H, m, pfrag, pstick, Sigma, smi
 
     sint(:) = SQRT(smin(:) * smax(:))
 
-    ! TODO: pfrag(:, 1, 2) or pfrag(:, 2, 2)? Chose pfrag(:, 3, 4) in accordance with smax_deriv
-    xiprime(:) = pfrag(:, 3, 4) * xifrag(:) + pstick(:, 3, 4) * xistick(:)
+    xiprime(:) = pfrag(:, 1, 2) * xifrag(:) + pstick(:, 1, 2) * xistick(:)
 
     F(:) = H(:, 2) * SQRT(2.d0 / (H(:, 1)**2 + H(:, 2)**2)) &
             & * sig(:, 1, 2) / sig(:, 2, 2) * dv(:, 1, 2) / dv(:, 2, 2) &
@@ -827,8 +826,7 @@ subroutine s_coag(a, dv, H, m, pfrag, pstick, Sigma, smin, smax, xifrag, xistick
 
     sint(:) = sqrt(smin(:) * smax(:))
 
-    ! TODO: pfrag(:, 1, 2) or pfrag(:, 2, 2)? Chose pfrag(:, 3, 4) in accordance with smax_deriv
-    xiprime(:) = pfrag(:, 3, 4) * xifrag(:) + pstick(:, 3, 4) * xistick(:)
+    xiprime(:) = pfrag(:, 1, 2) * xifrag(:) + pstick(:, 1, 2) * xistick(:)
 
     F(:) = H(:, 2) * sqrt(2.d0 / (H(:, 1)**2 + H(:, 2)**2)) &
             & * sig(:, 1, 2) / sig(:, 2, 2) * dv(:, 1, 2) / dv(:, 2, 2) &
@@ -893,6 +891,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudg
 
     do ir = 2, Nr - 1
 
+        ! Prevents unwanted growth of smax
         if(0.1d0 * (SigmaFloor(ir, 1) + SigmaFloor(ir, 2)) == Sigma(ir, 1) + Sigma(ir, 2)) then
             dsmax(ir) = 0.d0
 
