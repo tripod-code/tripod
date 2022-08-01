@@ -722,7 +722,9 @@ subroutine jacobian_coagulation_generator(a, dv, H, m, pfrag, pstick, Sigma, smi
     end do
 
     sint(:) = SQRT(smin(:) * smax(:))
-    xiprime(:) = pfrag(:, 1, 2) * xifrag(:) + pstick(:, 1, 2) * xistick(:)
+
+    # TODO: pfrag(:, 1, 2) or pfrag(:, 2, 2)?
+    xiprime(:) = pfrag(:, 2, 2) * xifrag(:) + pstick(:, 2, 2) * xistick(:)
 
     F(:) = H(:, 2) * SQRT(2.d0 / (H(:, 1)**2 + H(:, 2)**2)) &
             & * sig(:, 1, 2) / sig(:, 2, 2) * dv(:, 1, 2) / dv(:, 2, 2) &
@@ -818,7 +820,8 @@ subroutine s_coag(a, dv, H, m, pfrag, pstick, Sigma, smin, smax, xifrag, xistick
 
     sint(:) = sqrt(smin(:) * smax(:))
 
-    xiprime(:) = pfrag(:, 1, 2) * xifrag(:) + pstick(:, 1, 2) * xistick(:)
+    # TODO: pfrag(:, 1, 2) or pfrag(:, 2, 2)?
+    xiprime(:) = pfrag(:, 2, 2) * xifrag(:) + pstick(:, 2, 2) * xistick(:)
 
     F(:) = H(:, 2) * sqrt(2.d0 / (H(:, 1)**2 + H(:, 2)**2)) &
             & * sig(:, 1, 2) / sig(:, 2, 2) * dv(:, 1, 2) / dv(:, 2, 2) &
