@@ -639,7 +639,7 @@ subroutine calculate_xi(smin, smax, Sigma, SigmaFloor, xicalc, Nr, Nm)
     do i = 1, Nr
         if(smax(i) == sint(i)) then
             xicalc(i) = -2.5d0
-        else if(SigmaFloor(i, 1) + SigmaFloor(i, 2) == Sigma(i, 1) + Sigma(i, 2)) then
+        else if(0.1d0 * (SigmaFloor(i, 1) + SigmaFloor(i, 2)) == Sigma(i, 1) + Sigma(i, 2)) then
             xicalc(i) = -2.5d0
         else
             xicalc(i) = max(-20.d0, min(15.d0, log(Sigma(i, 2) / Sigma(i, 1)) / log(smax(i) / sint(i)) - 4.d0))
@@ -893,7 +893,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudg
 
     do ir = 2, Nr - 1
 
-        if(SigmaFloor(ir, 1) + SigmaFloor(ir, 2) == Sigma(ir, 1) + Sigma(ir, 2)) then
+        if(0.1d0 * (SigmaFloor(ir, 1) + SigmaFloor(ir, 2)) == Sigma(ir, 1) + Sigma(ir, 2)) then
             dsmax(ir) = 0.d0
 
         else
