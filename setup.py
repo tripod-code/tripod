@@ -28,7 +28,7 @@ def setup_package():
                          sources=[
                              "twopoppy/constants/constants.f90",
                              "twopoppy/utils/interpolation.f90",
-                             "twopoppy/std/dust.f90"
+                             "twopoppy/std/dust.f90",
                          ])
     extensions = [ext_const, ext_dust]
 
