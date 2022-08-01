@@ -42,7 +42,8 @@ class Simulation(dp.Simulation):
         self.dust.s.max = None
         self.dust.avgmode = None
         self.dust.tranf = None
-        self.dust.addgroup("vega", description="Particle size variation factors for relative velocities")
+        self.dust.addgroup(
+            "vega", description="Particle size variation factors for relative velocities")
         self.dust.vega.brown = None
         self.dust.vega.turb = None
         self.dust.sderivexp = None
@@ -188,6 +189,11 @@ class Simulation(dp.Simulation):
         if self.integrator is None:
             instructions = [
                 Instruction(
+                    schemes.expl_1_euler,
+                    self.dust.s.max,
+                    description="smax: explicit 1st-order Euler"
+                ),
+                Instruction(
                     std.dust.impl_1_direct,
                     self.dust._Y,
                     controller={"rhs": self.dust._Y_rhs},
@@ -312,12 +318,12 @@ class Simulation(dp.Simulation):
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
                 shape3), description="Fragmentation probability"
-                                     )
+            )
             self.dust.p.frag.updater = std.dust.p_frag
         if self.dust.p.stick is None:
             self.dust.p.stick = Field(self, np.zeros(
                 shape3), description="Sticking probability"
-                                      )
+            )
             self.dust.p.stick.updater = std.dust.p_stick
         # Source terms
         if self.dust.S.ext is None:
@@ -423,7 +429,8 @@ class Simulation(dp.Simulation):
             )
         # Transition function between sticking and fragmentation
         if self.dust.tranf is None:
-            tranf = 1  # Options: 1 (linear), 2 (std sigmoid), 3 (power law), 4 (bell), 5 (exponential), 6 (cosine)
+            # Options: 1 (linear), 2 (std sigmoid), 3 (power law), 4 (bell), 5 (exponential), 6 (cosine)
+            tranf = 1
             self.dust.addfield(
                 "tranf", tranf, description="Transition function between sticking and fragmentation"
             )
@@ -440,7 +447,8 @@ class Simulation(dp.Simulation):
             )
         # Exponent in smax deriv
         if self.dust.sderivexp is None:
-            derivexp = 8.  # Options: 1 (linear), 2 (std sigmoid), 3 (power law), 4 (bell), 5 (exponential), 6 (cosine)
+            # Options: 1 (linear), 2 (std sigmoid), 3 (power law), 4 (bell), 5 (exponential), 6 (cosine)
+            derivexp = 8.
             self.dust.addfield(
                 "sderivexp", derivexp, description="Exponent in smax deriv"
             )
@@ -494,7 +502,7 @@ class Simulation(dp.Simulation):
         # The right-hand side of the matrix equation is stored in a hidden field
         self.dust._rhs = Field(self, np.zeros(
             shape2Sigmaravel), description="Right-hand side of matrix equation [g/cm²]"
-                               )
+        )
         # State vector
         self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
                            description="State vector for integration")
@@ -502,7 +510,7 @@ class Simulation(dp.Simulation):
         # The right-hand side of the state vector matrix equation is stored in a hidden field
         self.dust._Y_rhs = Field(self, np.zeros_like(
             self.dust._Y), description="Right-hand side of state vector matrix equation"
-                                 )
+        )
         # Boundary conditions
         if self.dust.boundary.inner is None:
             self.dust.boundary.inner = dp.utils.Boundary(
