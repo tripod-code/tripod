@@ -642,6 +642,11 @@ subroutine calculate_xi(smin, smax, Sigma, SigmaFloor, xicalc, Nr, Nm)
         else
             xicalc(i) = max(-20.d0, min(15.d0, log(Sigma(i, 2) / Sigma(i, 1)) / log(smax(i) / sint(i)) - 4.d0))
         end if
+
+        ! Prevent values that would cause problems in integrals (edge cases or negligible anyways)
+        if(xicalc(i) == -4.d0 .or. xicalc(i) == -5.d0 .or. xicalc(i) == -6.d0) then
+            xicalc(i) = xicalc(i) + 1.d-100
+        end if
     end do
 
 end subroutine calculate_xi
