@@ -841,7 +841,8 @@ subroutine s_coag(a, dv, H, m, pfrag, pstick, Sigma, smin, smax, xifrag, xistick
 end subroutine s_coag
 
 
-subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudgeexp, dsmax, Nr, Nm)
+subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudgegro, &
+        & fudgesexp, fudgebexp, fudgebslo, fudgebshi, dsmax, Nr, Nm)
     ! Subroutine calculates the derivative of the maximum particle size
     !
     ! Parameters
@@ -854,7 +855,11 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudg
     ! vfrag(Nr) : Fragmentation velocity
     ! Sigma(Nr, Nm) : Dust surface density
     ! SigmaFloor(Nr, Nm) : Floor value of dust surface density
-    ! fudgeexp : Fudging factor exponent
+    ! fudgegro : Fudging mode for smax growth
+    ! fudgesexp: Fudging exponent
+    ! fudgebexp: Fudging exponent bell
+    ! fudgebslo: Fudging slope bell
+    ! fudgebshi: Fudging shift bell
     ! Nr : Number of radial grid cells
     ! Nm : Number of mass bins (only a0 and a1)
     !
@@ -872,7 +877,11 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudg
     double precision, intent(in) :: vfrag(Nr)
     double precision, intent(in) :: Sigma(Nr, Nm)
     double precision, intent(in) :: SigmaFloor(Nr, Nm)
-    double precision, intent(in) :: fudgeexp
+    integer, intent(in) :: fudgegro
+    double precision, intent(in) :: fudgesexp
+    double precision, intent(in) :: fudgebexp
+    double precision, intent(in) :: fudgebslo
+    double precision, intent(in) :: fudgebshi
     double precision, intent(out) :: dsmax(Nr)
     integer, intent(in) :: Nr
     integer, intent(in) :: Nm
@@ -898,19 +907,26 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudg
             dsmax(ir) = 0.d0
 
         else
-            A = (dv(ir) / vfrag(ir)) ** fudgeexp
-            B = (1.d0 - A) / (1.d0 + A)
-
-            C = dv(ir) / vfrag(ir)
-            D = 1. - exp(-10.d0 * (C - 1.2d0)**6.d0)
 
             rhod_sum = SUM(rhod(ir, :))
             rhos_mean = SUM(rhod(ir, :) * rhos(ir, :)) / rhod_sum
-            ! dsmax(ir) = rhod_sum / rhos_mean * dv(ir) * B
-            dsmax(ir) = rhod_sum / rhos_mean * dv(ir) * D
 
-            if(dsmax(ir) > 0.d0 .and. C > 1.d0) then
-                dsmax(ir) = -1.d0 * dsmax(ir)
+            if(fudgegro == 1) then
+
+                A = (dv(ir) / vfrag(ir)) ** fudgesexp
+                B = (1.d0 - A) / (1.d0 + A)
+                dsmax(ir) = rhod_sum / rhos_mean * dv(ir) * B
+
+            else if(fudgegro == 2) then
+
+                C = dv(ir) / vfrag(ir)
+                D = 1. - exp(-fudgebslo * (C - fudgebshi)**fudgebexp)
+                dsmax(ir) = rhod_sum / rhos_mean * dv(ir) * D
+
+                if(dsmax(ir) > 0.d0 .and. C > 1.d0) then
+                    dsmax(ir) = -1.d0 * dsmax(ir)
+                end if
+
             end if
 
             if (dsmax(ir) < 0.d0) then
