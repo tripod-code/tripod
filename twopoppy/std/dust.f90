@@ -326,7 +326,7 @@ subroutine pfrag(vrel, vfrag, tranf, fudgegro, fudgebfrag, pf, Nr, Nm)
             do i = 1, Nm
                 do j = 1, i
                     do ir = 2, Nr - 1
-                        dum = 5.d0 * (vrel(ir, j, i) / vfrag(ir)) - 4.d0
+                        dum = 0.2d0 * fudgebfrag * (vrel(ir, j, i) / vfrag(ir)) + 1.d0 - 0.2d0 * fudgebfrag**2.d0
                         pf(ir, j, i) = max(0.d0, min(1.d0, dum))
                         pf(ir, i, j) = pf(ir, j, i)
                     end do
@@ -933,7 +933,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, fudg
 
             if(fudgegro == 1) then
 
-                A = (dv(ir) / vfrag(ir)) ** fudgesexp
+                A = (dv(ir) / vfrag(ir) / fudgebfrag) ** fudgesexp
                 B = (1.d0 - A) / (1.d0 + A)
                 dsmax(ir) = rhod_sum / rhos_mean * dv(ir) * B
 
