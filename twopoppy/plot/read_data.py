@@ -86,7 +86,7 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
     except:
         pass
 
-    mi, SigmaDusti, Sti = powerlaw_extrapolation(SigmaDust, smax, xi, rhos, fill, SigmaGas, mfp,
+    mi, SigmaDusti, Sti, ai = powerlaw_extrapolation(SigmaDust, smax, xi, rhos, fill, SigmaGas, mfp,
                                                  nmbpd=7, mmin=1.e-12, mmax=1.e8)
 
     # Transformation of the density distribution
@@ -144,6 +144,7 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
     ret["cs"] = cs
     ret["delta"] = delta
     ret["OmegaK"] = OmegaK
+    ret["ai"] = ai
     ret["Sti"] = Sti
     ret["StDr"] = StDr
     ret["StFr"] = StFr
@@ -342,4 +343,4 @@ def powerlaw_extrapolation(sigma_d, s_max, xi, rhos, fill, sigma_g, mfp, nmbpd=7
     for i in range(nt):
         st_i[i] = dp_dust_f.st_epstein_stokes1(a_i[i], mfp[i], rho_i[i], sigma_g[i])
 
-    return m_i, sig_dm, st_i
+    return m_i, sig_dm, st_i, a_i
