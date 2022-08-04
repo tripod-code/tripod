@@ -547,7 +547,7 @@ def p_frag(sim):
     -------
     pf : Field
         Fragmentation probability."""
-    return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag, sim.dust.fudge.tranf, sim.dust.fudge.growth, sim.dust.fudge.bfrag)
+    return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag, sim.dust.fudge.frag)
 
 
 def p_stick(sim):
@@ -615,12 +615,8 @@ def smax_deriv(sim, t, smax):
         sim.dust.v.frag,
         sim.dust.Sigma,
         sim.dust.SigmaFloor,
-        sim.dust.fudge.growth,
-        sim.dust.fudge.sexp,
-        sim.dust.fudge.bexp,
-        sim.dust.fudge.bslo,
-        sim.dust.fudge.bshi,
-        sim.dust.fudge.bfrag
+        sim.dust.fudge.exp,
+        sim.dust.fudge.frag
     )
 
 

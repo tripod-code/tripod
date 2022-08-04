@@ -45,13 +45,8 @@ class Simulation(dp.Simulation):
         self.dust.fudge.tot = None
         self.dust.fudge.brown = None
         self.dust.fudge.turb = None
-        self.dust.fudge.sexp = None
-        self.dust.fudge.bexp = None
-        self.dust.fudge.bslo = None
-        self.dust.fudge.bshi = None
-        self.dust.fudge.bfrag = None
-        self.dust.fudge.tranf = None
-        self.dust.fudge.growth = None
+        self.dust.fudge.exp = None
+        self.dust.fudge.frag = None
         self.dust.fudge.avgmode = None
 
         # Adjusting update orders
@@ -424,7 +419,7 @@ class Simulation(dp.Simulation):
             )
         # Particle size variation factors
         if self.dust.fudge.tot is None:
-            fudgetot = 1.
+            fudgetot = 0.5
             self.dust.fudge.addfield(
                 "tot", fudgetot, description="Variation factor total relative velocity"
             )
@@ -439,44 +434,15 @@ class Simulation(dp.Simulation):
                 "turb", fudgetu, description="Variation factor turbulent motion"
             )
         # Fudging factor parameters in smax deriv
-        if self.dust.fudge.sexp is None:
-            fudgesexp = 8.
+        if self.dust.fudge.exp is None:
+            fudgeexp = 8.
             self.dust.fudge.addfield(
-                "sexp", fudgesexp, description="Smax growth fudging exponent"
+                "exp", fudgeexp, description="Smax growth fudging exponent"
             )
-        if self.dust.fudge.bexp is None:
-            fudgebexp = 6.
+        if self.dust.fudge.frag is None:
+            fudgefra = 1.
             self.dust.fudge.addfield(
-                "bexp", fudgebexp, description="Smax growth fudging exponent bell"
-            )
-        if self.dust.fudge.bslo is None:
-            fudgebslo = 6.
-            self.dust.fudge.addfield(
-                "bslo", fudgebslo, description="Smax growth fudging slope bell"
-            )
-        if self.dust.fudge.bshi is None:
-            fudgebshi = 1.2
-            self.dust.fudge.addfield(
-                "bshi", fudgebshi, description="Smax growth fudging shift bell"
-            )
-        if self.dust.fudge.bfrag is None:
-            fudgebfra = 1.
-            self.dust.fudge.addfield(
-                "bfrag", fudgebfra, description="Fragmentation limit fudging bell"
-            )
-        # Transition function between sticking and fragmentation
-        if self.dust.fudge.tranf is None:
-            # Options: 1 (linear), 2 (std sigmoid), 3 (power law), 4 (bell), 5 (exponential), 6 (cosine)
-            tranf = 1
-            self.dust.fudge.addfield(
-                "tranf", tranf, description="Transition function between sticking and fragmentation"
-            )
-        # Fudging mode for smax growth
-        if self.dust.fudge.growth is None:
-            # Options: 1 (conventional), 2 (bell)
-            fudgegro = 1
-            self.dust.fudge.addfield(
-                "growth", fudgegro, description="Fudging mode for smax growth"
+                "frag", fudgefra, description="Fragmentation limit fudge factor"
             )
         # Averaging mode for size calculations
         if self.dust.fudge.avgmode is None:
