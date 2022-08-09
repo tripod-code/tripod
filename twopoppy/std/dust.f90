@@ -318,8 +318,6 @@ subroutine pfrag(vrel, vfrag, fudgefrag, fudgeramp, pf, Nr, Nm)
     integer :: i
     integer :: j
 
-    val = 0.8d0
-
     do i = 1, Nm
         do j = 1, i
             do ir = 2, Nr - 1
