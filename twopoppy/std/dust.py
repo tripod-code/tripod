@@ -129,9 +129,9 @@ def finalize(sim):
 
     # Copy values from state vector to fields
     sim.dust.Sigma[...] = sim.dust._Y[:Nr * Nm_s].reshape(sim.dust.Sigma.shape)
-    # Making sure smax is not smaller than smin
+    # Making sure smax is not smaller than 1.5 smin to ensure minimal distribution width
     sim.dust.s.max[...] = np.maximum(
-        sim.dust.s.min, sim.dust._Y[Nr * Nm_s:] / sim.dust.Sigma[:, 1])
+        1.5 * sim.dust.s.min, sim.dust._Y[Nr * Nm_s:] / sim.dust.Sigma[:, 1])
 
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
