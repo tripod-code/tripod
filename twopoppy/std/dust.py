@@ -24,9 +24,11 @@ def dt(sim):
     -------
     dt : float
         Dust time step"""
-    dtSigma = dt_Sigma(sim)
+    dtSigma = dp_dust.dt(sim) or 1e100
     dtsmax = dt_smax(sim)
     return np.minimum(dtSigma, dtsmax)
+
+# TODO: Check if this is still needed since we now use the one from dustpy
 
 
 def dt_Sigma(sim):
@@ -65,32 +67,13 @@ def dt_smax(sim):
     -------
     dt_smax : float
         Particle growth time step"""
-    # TODO: Which factor for maximum growth makes sense here?
-    max_growth_fact = 2.
+    # TODO: double check if this makes sense
 
-    # Helper variables. Ignoring boundaries.
+    # Ignoring boundaries.
     smax_dot = sim.dust.s.max.derivative()[1:-1]
-    smax = sim.dust.s.max[1:-1]
-    smin = sim.dust.s.min[1:-1]
+    dt = sim.dust.s.max[1:-1] / (np.abs(smax_dot) + 1e-100)
 
-    # Time step if smax is shrinking.
-    # Value must not drop below smin
-    mask1 = np.logical_and(smax_dot < 0., smax > smin)
-    if np.any(mask1):
-        rate1 = (smin[mask1] - smax[mask1]) / smax_dot[mask1]
-        dt1 = np.min(np.abs(rate1))
-    else:
-        dt1 = 1.e100
-
-    # Time step if smax is growing.
-    # Value must not grow by more than the maximum growth factor
-    mask2 = smax_dot > 0.
-    if np.any(mask2):
-        rate2 = (max_growth_fact - 1.) * smax[mask2] / smax_dot[mask2]
-        dt2 = np.min(np.abs(rate2))
-    else:
-        dt2 = 1.e100
-    return np.minimum(dt1, dt2)
+    return dt
 
 
 def prepare(sim):
@@ -144,19 +127,6 @@ def finalize(sim):
     # This boundary condition keeps smax constant
     sim.dust.s.max[0] = sim.dust.s.max[1]
     sim.dust.s.max[-1] = sim.dust.s.max[-2]
-    # This boundary condition keeps xi constant
-    # xip4 = 2. * np.log(sim.dust.Sigma[1, 1]/sim.dust.Sigma[1, 0]) / \
-    #    np.log(sim.dust.s.max[1]/sim.dust.s.min[1])
-    # sim.dust.s.max[0] = sim.dust.s.min[0] * \
-    #    np.exp(2.*np.log(sim.dust.Sigma[0, 1]/sim.dust.Sigma[0, 0]) / xip4)
-    # xip4 = 2. * np.log(sim.dust.Sigma[-2, 1]/sim.dust.Sigma[-2, 0]) / \
-    #    np.log(sim.dust.s.max[-2]/sim.dust.s.min[-2])
-    # sim.dust.s.max[-1] = sim.dust.s.min[-1] * \
-    #    np.exp(2.*np.log(sim.dust.Sigma[-1, 1]/sim.dust.Sigma[-1, 0]) / xip4)
-
-    # print(repr(sim.dust.s.max))
-    # print(repr(sim.dust.s.min))
-    # print(repr(sim.dust.Sigma))
 
 
 def smax_initial(sim):
@@ -186,14 +156,15 @@ def smax_initial(sim):
         gamma = np.abs(gamma)
         # Exponent of pressure gradient
         gamma *= sim.grid.r / P
-        gamma = 1. / gamma
         # Maximum drift limited particle size with safety margin
-        ad = 1.e-4 * 2. / np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma / sim.dust.fill[:, 0] \
-             * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r) ** 2. / sim.gas.cs ** 2. / gamma
+        ad = 5e-3 * 2. / np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma / sim.dust.fill[:, 0] \
+            * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r) ** 2. / sim.gas.cs ** 2. / gamma
         aIni = np.minimum(sim.ini.dust.aIniMax, ad)
+
+        # TODO: Sandro used this; we need to check if this is necessary
         # Enforce initial drift limit
-        sim.dust.xi.calc = np.where(
-            aIni < sim.ini.dust.aIniMax, sim.dust.xi.stick, sim.dust.xi.calc)
+        # sim.dust.q.eff = np.where(
+        #     aIni < sim.ini.dust.aIniMax, sim.dust.q.sweep, sim.dust.q.eff)
 
         return np.maximum(smin, aIni)
 
@@ -215,14 +186,14 @@ def Sigma_initial(sim):
         Initial dust surface density"""
 
     # Helper variables
-    xi = sim.dust.xi.calc
-    xip4 = xi + 4.
+    q = sim.dust.q.eff
+    qp4 = q + 4.
     smin = sim.dust.s.min
     smax = sim.dust.s.max
     sint = np.sqrt(smin * smax)
     SigmaFloor = sim.dust.SigmaFloor
 
-    # Values for xi != -4
+    # Values for q != -4
     S0 = np.zeros_like(sim.grid.r)
     S1 = np.zeros_like(sim.grid.r)
     for i in range(int(sim.grid.Nr)):
@@ -230,12 +201,12 @@ def Sigma_initial(sim):
             S0[i] = SigmaFloor[i, 0]
             S1[i] = SigmaFloor[i, 1]
         else:
-            S0[i] = (sint[i] ** xip4[i] - smin[i] ** xip4[i]) / \
-                    (smax[i] ** xip4[i] - smin[i] ** xip4[i])
+            S0[i] = (sint[i] ** qp4[i] - smin[i] ** qp4[i]) / \
+                    (smax[i] ** qp4[i] - smin[i] ** qp4[i])
             S1[i] = 1. - S0[i]
     S = np.array([S0, S1]).T
 
-    # Values for xi == -4
+    # Values for q == -4
     S0_4 = np.zeros_like(sim.grid.r)
     S1_4 = np.zeros_like(sim.grid.r)
     for i in range(int(sim.grid.Nr)):
@@ -247,7 +218,8 @@ def Sigma_initial(sim):
             S1_4[i] = 1. - S0_4[i]
     S_4 = np.array([S0_4, S1_4]).T
 
-    Sigma = sim.ini.dust.d2gRatio * sim.gas.Sigma[:, None] * np.where(xi[:, None] == -4., S_4, S)
+    Sigma = sim.ini.dust.d2gRatio * \
+        sim.gas.Sigma[:, None] * np.where(q[:, None] == -4., S_4, S)
 
     return Sigma
 
@@ -293,27 +265,27 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
 
     # Getting data vector and coordinates for the coagulation sparse matrix
     dat_coag, row_coag, col_coag = dust_f.jacobian_coagulation_generator(
-        sim.dust.a[:, :2],
-        sim.dust.v.rel.tot[:, :2, :2],
-        sim.dust.H[:, :2],
-        sim.dust.m[:, :2],
-        sim.dust.p.frag[:, 2:, 2:],
-        sim.dust.p.stick[:, 2:, 2:],
+        # here we compute the cross section where the first entry is
+        # the cross section of (a0, a1) and the second of (a1, fudge * a1)
+        np.pi * (sim.dust.a[:, [0, 2]]+sim.dust.a[:, [2, 1]])**2,
+        # same for the relative velocities
+        sim.dust.v.rel.tot[:, [0, 2], [2, 1]],
+        sim.dust.H,
+        sim.dust.m[[0, 2]],
         sim.dust.Sigma,
         sim.dust.s.min,
         sim.dust.s.max,
-        sim.dust.xi.frag,
-        sim.dust.xi.stick
+        sim.dust.q.eff
     )
 
     # Getting data vector and coordinates for the hydrodynamic sparse matrix
     A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
         area,
-        sim.dust.D[:, :2],
+        sim.dust.D[:, [0, 2]],
         r,
         ri,
         sim.gas.Sigma,
-        sim.dust.v.rad[:, :2]
+        sim.dust.v.rad[:, [0, 2]]
     )
     row_hyd = np.hstack(
         (np.arange(Ntot - Nm_s) + Nm_s, np.arange(Ntot), np.arange(Ntot - Nm_s)))
@@ -350,7 +322,8 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
         elif sim.dust.boundary.inner.condition == "grad":
             K1 = - r[1] / r[0]
             dat_in[Nm_s:2 * Nm_s] = -K1 / dt
-            sim.dust._rhs[:Nm_s] = - ri[1] / r[0] * (r[1] - r[0]) * sim.dust.boundary.inner.value
+            sim.dust._rhs[:Nm_s] = - ri[1] / r[0] * \
+                (r[1] - r[0]) * sim.dust.boundary.inner.value
         # Constant gradient
         elif sim.dust.boundary.inner.condition == "const_grad":
             Di = ri[1] / ri[2] * (r[1] - r[0]) / (r[2] - r[0])
@@ -397,7 +370,8 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
         elif sim.dust.boundary.outer.condition == "grad":
             KNrm2 = -r[-2] / r[-1]
             dat_out[-2 * Nm_s:-Nm_s] = -KNrm2 / dt
-            sim.dust._rhs[-Nm_s:] = ri[-2] / r[-1] * (r[-1] - r[-2]) * sim.dust.boundary.outer.value
+            sim.dust._rhs[-Nm_s:] = ri[-2] / r[-1] * \
+                (r[-1] - r[-2]) * sim.dust.boundary.outer.value
         # Constant gradient
         elif sim.dust.boundary.outer.condition == "const_grad":
             Do = ri[-2] / ri[-3] * (r[-1] - r[-2]) / (r[-2] - r[-3])
@@ -445,8 +419,7 @@ def a(sim):
     -------
     a : Field
         Particle sizes"""
-    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.xi.calc, sim.gas.mfp,
-                              sim.dust.fudge.avgmode, sim.dust.fudge.tot, sim.grid._Nm_long)
+    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.q.eff, sim.dust.f.dv, sim.grid._Nm_long)
 
 
 def F_adv(sim, Sigma=None):
@@ -467,7 +440,7 @@ def F_adv(sim, Sigma=None):
         Advective mass fluxes through the grid cell interfaces"""
     if Sigma is None:
         Sigma = sim.dust.Sigma
-    return dust_f.fi_adv(Sigma, sim.dust.v.rad, sim.grid.r, sim.grid.ri)
+    return dust_f.fi_adv(Sigma, sim.dust.v.rad[:, [0, 2]], sim.grid.r, sim.grid.ri)
 
 
 def F_diff(sim, Sigma=None):
@@ -475,10 +448,10 @@ def F_diff(sim, Sigma=None):
     if Sigma is None:
         Sigma = sim.dust.Sigma
 
-    Fi = dust_f.fi_diff(sim.dust.D,
+    Fi = dust_f.fi_diff(sim.dust.D[:, [0, 2]],
                         Sigma,
                         sim.gas.Sigma,
-                        sim.dust.St,
+                        sim.dust.St[:, [0, 2]],
                         np.sqrt(sim.dust.delta.rad * sim.gas.cs ** 2),
                         sim.grid.r,
                         sim.grid.ri)
@@ -538,6 +511,8 @@ def p_frag(sim):
     The type of assumed transition between sticking and
     fragmentation is given as an argument.
 
+    This uses the relative velocities between 0.5 * amax and amax.
+
     Parameters
     ----------
     sim : Frame
@@ -547,8 +522,7 @@ def p_frag(sim):
     -------
     pf : Field
         Fragmentation probability."""
-    return dust_f.pfrag(sim.dust.v.rel.tot, sim.dust.v.frag, sim.dust.fudge.frag, sim.dust.fudge.ramp1,\
-           sim.dust.fudge.ramp2)
+    return dust_f.pfrag(sim.dust.v.rel.tot[:, -2, -1], sim.dust.v.frag)
 
 
 def p_stick(sim):
@@ -571,6 +545,21 @@ def p_stick(sim):
     return p
 
 
+def H(sim):
+    """Computes the dust scale height by using the
+    dustpy function, but storing only the scale heights
+    of a0 and a1.
+
+    Parameters
+    ----------
+    sim : the simulation frame
+    """
+    return dp_dust_f.h_dubrulle1995(
+        sim.gas.Hp,
+        sim.dust.St[:, [0, 2]],
+        sim.dust.delta.vert)
+
+
 def rho_midplane(sim):
     """Function calculates the midplane mass density.
 
@@ -584,7 +573,7 @@ def rho_midplane(sim):
     rho : Field
         Midplane mass density"""
     # The scale height H has a longer shape than Sigma and has to be adjusted
-    return sim.dust.Sigma / (np.sqrt(2 * c.pi) * sim.dust.H[:, :2])
+    return sim.dust.Sigma / (np.sqrt(2 * c.pi) * sim.dust.H)
 
 
 def smax_deriv(sim, t, smax):
@@ -608,17 +597,14 @@ def smax_deriv(sim, t, smax):
         smax = sim.dust.s.max
 
     return dust_f.smax_deriv(
-        sim.dust.v.rel.tot[:, 2, 3],
-        sim.dust.rho[:, :2],
-        sim.dust.rhos[:, :2],
+        sim.dust.v.rel.tot[:, -2, -1],
+        sim.dust.rho[:, 1],
+        sim.dust.rhos[:, 1],
         sim.dust.s.min,
-        smax,
+        sim.dust.s.max,
         sim.dust.v.frag,
         sim.dust.Sigma,
-        sim.dust.SigmaFloor,
-        sim.dust.fudge.exp,
-        sim.dust.fudge.frag
-    )
+        sim.dust.SigmaFloor)
 
 
 def S_coag(sim, Sigma=None):
@@ -639,21 +625,23 @@ def S_coag(sim, Sigma=None):
         Sigma = sim.dust.Sigma
 
     s_coag = dust_f.s_coag(
-        sim.dust.a[:, :2],
-        sim.dust.v.rel.tot[:, :2, :2],
-        sim.dust.H[:, :2],
-        sim.dust.m[:, :2],
-        sim.dust.p.frag[:, 2:, 2:],
-        sim.dust.p.stick[:, 2:, 2:],
+        # here we compute the cross section where the first entry is
+        # the cross section of (a0, a1) and the second of (a1, fudge * a1)
+        np.pi * (sim.dust.a[:, [0, 2]]+sim.dust.a[:, [2, 1]])**2,
+        # same for the relative velocities
+        sim.dust.v.rel.tot[:, [0, 2], [2, 1]],
+        sim.dust.H,
+        sim.dust.m[:, [0, 2]],
         Sigma,
         sim.dust.s.min,
         sim.dust.s.max,
-        sim.dust.xi.frag,
-        sim.dust.xi.stick
+        sim.dust.q.eff
     )
 
     # Prevents unwanted growth of smax
-    return s_coag * np.where(sim.dust.Sigma.sum(-1) > sim.dust.SigmaFloor.sum(-1)[0], 1., 0.)[:, None]
+    return s_coag * np.where(sim.dust.Sigma.sum(-1) > sim.dust.SigmaFloor.sum(-1), 1., 0.)[:, None]
+
+# TODO: check if this is still needed after the dustpy update
 
 
 def S_tot(sim, Sigma=None):
@@ -684,9 +672,8 @@ def S_tot(sim, Sigma=None):
     return Scoag + Shyd + Sext
 
 
-def vrel_brownian_motion(sim):
-    """Function calculates the relative particle velocities due to Brownian motion.
-    The maximum value is set to the sound speed.
+def q_eff(sim):
+    """Function calculates the equilibrium exponent of the distribution.
 
     Parameters
     ----------
@@ -695,55 +682,34 @@ def vrel_brownian_motion(sim):
 
     Returns
     -------
-    vrel : Field
-        Relative velocities"""
-    m_var = sim.dust.m
-    m_var[:, 2] *= sim.dust.fudge.brown ** 3.
-    return dust_f.vrel_brownian_motion(sim.gas.cs, m_var, sim.gas.T)
-
-
-def vrel_turbulent_motion(sim):
-    """Function calculates the relative particle velocities due to turbulent motion.
-    It uses the prescription of Cuzzi & Ormel (2007).
-
-    Parameters
-    ----------
-    sim : Frame
-        Parent simulation frame
-
-    Returns
-    -------
-    vrel : Field
-        Relative velocities"""
-
-    rho = sim.dust.rhos * sim.dust.fill
-    a_var = sim.dust.a
-    a_var[:, 2] *= sim.dust.fudge.turb
-    St_var = dp_dust_f.st_epstein_stokes1(a_var, sim.gas.mfp, rho, sim.gas.Sigma)
-
-    return dust_f.vrel_cuzzi_ormel_2007(
-        sim.dust.delta.turb,
-        sim.gas.cs,
-        sim.gas.mu,
-        sim.grid.OmegaK,
-        sim.gas.Sigma,
-        sim.dust.St,
-        St_var)
-
-
-def xicalc(sim):
-    """Function calculates the exponent of the distribution.
-
-    Parameters
-    ----------
-    sim : Frame
-        Parent simulation frame
-
-    Returns
-    -------
-    xicalc : Field
+    q_eff : Field
         Calculated exponent of distribution"""
-    return dust_f.calculate_xi(sim.dust.s.min, sim.dust.s.max, sim.dust.Sigma, sim.dust.SigmaFloor)
+    return sim.dust.q.frag * sim.dust.p.frag + sim.dust.q.sweep * (1.0 - sim.dust.p.frag)
+
+
+def q_frag(sim):
+    """
+    Calculate the effective fragmentation power-law of the size distribution.
+
+    Parameters:
+    sim (Simulation): The simulation object containing the dust and gas properties.
+
+    Returns:
+    float: The effective fragmentation power-law of the size distribution.
+    """
+    return dust_f.qfrag(
+        sim.dust.v.rel.turb[:, -1, -2],
+        np.sqrt(sim.dust.v.rel.rad[:, -1, -2]**2 +
+                sim.dust.v.rel.azi[:, -1, -2]**2),
+        sim.dust.v.rel.tot[:, -1, -2],
+        sim.dust.v.frag,
+        sim.dust.St[:, -1],
+        sim.dust.q.turb1,
+        sim.dust.q.turb2,
+        sim.dust.q.drfrag,
+        sim.gas.alpha,
+        sim.gas.Sigma,
+        sim.gas.mu)
 
 
 def Y_jacobian(sim, x, dx=None, *args, **kwargs):
@@ -846,7 +812,7 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     # smax*Sigma (product rule)
     S_smax_expl = np.zeros_like(Y0._owner.dust.s.max)
     S_smax_expl[1:-1] = Y0._owner.dust.s.max.derivative()[1:-1] * Y0._owner.dust.Sigma[1:-1, 1] \
-                        + S_Sigma_ext[1:-1, 1] * Y0._owner.dust.s.max[1:-1]
+        + S_Sigma_ext[1:-1, 1] * Y0._owner.dust.s.max[1:-1]
     # Stitching both parts together
     S = np.hstack((S_Sigma_ext.ravel(), S_smax_expl))
 

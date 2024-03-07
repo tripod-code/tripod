@@ -32,24 +32,22 @@ class Simulation(dp.Simulation):
 
         # Add new fields
         self.dust.m = None
-        self.dust.addgroup("xi", description="Distribution exponents")
-        self.dust.xi.calc = None
-        self.dust.xi.frag = None
-        self.dust.xi.stick = None
-        self.dust.xi.updater = ["calc"]
+        self.dust.addgroup("q", description="Distribution exponents")
+        self.dust.q.eff = None
+        self.dust.q.turb1 = None
+        self.dust.q.turb2 = None
+        self.dust.q.drfrag = None
+        self.dust.q.sweep = None
+        self.dust.q.updater = ["eff"]  # TODO: update the updater
         self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
         self.dust.addgroup(
-            "fudge", description="Fudge factors")
-        self.dust.fudge.tot = None
-        self.dust.fudge.brown = None
-        self.dust.fudge.turb = None
-        self.dust.fudge.exp = None
-        self.dust.fudge.frag = None
-        self.dust.fudge.ramp1 = None
-        self.dust.fudge.ramp2 = None
-        self.dust.fudge.avgmode = None
+            "f", description="Fudge factors")
+        self.dust.f.crit = None
+        self.dust.f.drift = None
+        self.dust.f.dvdrift = None
+        self.dust.f.dvturb = None
 
         # Adjusting update orders
 
@@ -60,8 +58,8 @@ class Simulation(dp.Simulation):
 
         # Adjusting the updater of main simulation frame
         updtordr = self.dust.updateorder
-        # Add "xi" after "fill"
-        addelemtafter(updtordr, "xi", "fill")
+        # Add "q" after "fill"
+        addelemtafter(updtordr, "q", "fill")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
         # Add "SigmaFloor" after "m"
@@ -128,7 +126,7 @@ class Simulation(dp.Simulation):
         # Other quantities need Nm_long particle species.
         # We store them in hidden variables.
         Nm_short = 2
-        Nm_long = 4
+        Nm_long = 5
         self.grid.addfield(
             "_Nm_short",
             Nm_short,
@@ -299,7 +297,7 @@ class Simulation(dp.Simulation):
             self.dust.addfield(
                 "H", np.zeros(shape2), description="Scale heights [cm]"
             )
-            self.dust.H.updater = dp.std.dust.H
+            self.dust.H.updater = std.dust.H
         # Midplane mass density
         if self.dust.rho is None:
             self.dust.addfield(
@@ -315,12 +313,12 @@ class Simulation(dp.Simulation):
         # Probabilities
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
-                shape3), description="Fragmentation probability"
+                shape1), description="Fragmentation probability"
             )
             self.dust.p.frag.updater = std.dust.p_frag
         if self.dust.p.stick is None:
             self.dust.p.stick = Field(self, np.zeros(
-                shape3), description="Sticking probability"
+                shape1), description="Sticking probability"
             )
             self.dust.p.stick.updater = std.dust.p_stick
         # Source terms
@@ -364,7 +362,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]"
             )
-            self.dust.v.rel.brown.updater = std.dust.vrel_brownian_motion
+            self.dust.v.rel.brown.updater = dp.std.dust.vrel_brownian_motion
         if self.dust.v.rel.rad is None:
             self.dust.v.rel.addfield(
                 "rad", np.zeros(shape3), description="Relative radial velocity [cm/s]"
@@ -374,7 +372,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "turb", np.zeros(shape3), description="Relative turbulent velocity [cm/s]"
             )
-            self.dust.v.rel.turb.updater = std.dust.vrel_turbulent_motion
+            self.dust.v.rel.turb.updater = dp.std.dust.vrel_turbulent_motion
         if self.dust.v.rel.vert is None:
             self.dust.v.rel.addfield(
                 "vert", np.zeros(shape3), description="Relative vertical settling velocity [cm/s]"
@@ -396,21 +394,32 @@ class Simulation(dp.Simulation):
             )
             self.dust.v.rad.updater = dp.std.dust.vrad
         # Distribution exponents
-        if self.dust.xi.calc is None:
-            xi = self.ini.dust.distExp * np.ones(shape1)
-            self.dust.xi.addfield(
-                "calc", xi, description="Calculated distribution exponent"
+        if self.dust.q.eff is None:
+            q = np.ones(shape1)  # will be computed in the updater
+            self.dust.q.addfield(
+                "eff", q, description="Calculated distribution exponent"
             )
-            self.dust.xi.calc.updater = std.dust.xicalc
-        if self.dust.xi.frag is None:
-            xifrag = self.ini.dust.distExp * np.ones(shape1)
-            self.dust.xi.addfield(
-                "frag", xifrag, description="Fragmentation distribution exponent"
+            self.dust.q.eff.updater = std.dust.q_eff
+        if self.dust.q.frag is None:
+            self.dust.q.addfield(
+                "frag", np.ones(shape1), description="Fragmentation distribution exponent"
             )
-        if self.dust.xi.stick is None:
-            xistick = (self.ini.dust.distExp + 1.) * np.ones(shape1)
-            self.dust.xi.addfield(
-                "stick", xistick, description="Drift distribution exponent"
+            self.dust.q.eff.updater = std.dust.q_frag
+        if self.dust.q.turb1 is None:
+            self.dust.q.addfield(
+                "turb1", -3.75, description="Size distribution exponent in first turbulence regime"
+            )
+        if self.dust.q.turb2 is None:
+            self.dust.q.addfield(
+                "turb2", -3.5, description="Size distribution exponent in second turbulence regime"
+            )
+        if self.dust.q.drfrag is None:
+            self.dust.q.addfield(
+                "drfrag", -3.75, description="Size distribution exponent in drift-induced fragmentation regime"
+            )
+        if self.dust.q.sweep is None:
+            self.dust.q.addfield(
+                "sweep", -2.5, description="Size distribution exponent in the sweep-up regime"
             )
         # Specific particle sizes
         if self.dust.s.min is None:
@@ -420,48 +429,21 @@ class Simulation(dp.Simulation):
                 "min", smin, description="Minimum particle size"
             )
         # Particle size variation factors
-        if self.dust.fudge.tot is None:
-            fudgetot = 0.5
-            self.dust.fudge.addfield(
-                "tot", fudgetot, description="Variation factor total relative velocity"
+        if self.dust.f.crit is None:
+            self.dust.f.addfield(
+                "crit", 0.475, description="Critical mass depletion coefficient for shrinking"
             )
-        if self.dust.fudge.brown is None:
-            fudgebr = 1.
-            self.dust.fudge.addfield(
-                "brown", fudgebr, description="Variation factor brownian motion"
+        if self.dust.f.drift is None:
+            self.dust.f.addfield(
+                "drift", 0.7, description="Drift velocity calibration factor"
             )
-        if self.dust.fudge.turb is None:
-            fudgetu = 1.
-            self.dust.fudge.addfield(
-                "turb", fudgetu, description="Variation factor turbulent motion"
+        if self.dust.f.dvturb is None:
+            self.dust.f.addfield(
+                "dvturb", 0.1, description="Collision speed parameter in turb.-dom. regime"
             )
-        # Fudging factor parameters in smax deriv
-        if self.dust.fudge.exp is None:
-            fudgeexp = 8.
-            self.dust.fudge.addfield(
-                "exp", fudgeexp, description="Smax growth fudging exponent"
-            )
-        if self.dust.fudge.frag is None:
-            fudgefra = 1.
-            self.dust.fudge.addfield(
-                "frag", fudgefra, description="Fragmentation limit fudge factor"
-            )
-        if self.dust.fudge.ramp1 is None:
-            fudgeramp1 = 0.8
-            self.dust.fudge.addfield(
-                "ramp1", fudgeramp1, description="Ramp up start transition function"
-            )
-        if self.dust.fudge.ramp2 is None:
-            fudgeramp2 = 0.9
-            self.dust.fudge.addfield(
-                "ramp2", fudgeramp2, description="Ramp up stop transition function"
-            )
-        # Averaging mode for size calculations
-        if self.dust.fudge.avgmode is None:
-            # Options: 1 (flux), 2 (mass)
-            avgmode = 1
-            self.dust.fudge.addfield(
-                "avgmode", avgmode, description="Averaging mode for size calculation"
+        if self.dust.f.dvdrift is None:
+            self.dust.f.addfield(
+                "dvdrift", 0.2, description="collision speed parameter in drift-dom. regime"
             )
 
         # Initialize dust quantities partly to calculate Sigma
@@ -514,7 +496,7 @@ class Simulation(dp.Simulation):
         )
         # State vector
         self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
-                           description="State vector for integration")
+                           description="Dust state vector (Sig1, Sig2, a_max * Sig1)")
         self.dust._Y.jacobinator = std.dust.Y_jacobian
         # The right-hand side of the state vector matrix equation is stored in a hidden field
         self.dust._Y_rhs = Field(self, np.zeros_like(
