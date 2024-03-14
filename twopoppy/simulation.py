@@ -43,6 +43,8 @@ class Simulation(dp.Simulation):
         self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
+        self.dust.s.lim = None
+        self.dust.s._sdot_shrink = None
         self.dust.addgroup(
             "f", description="Fudge factors")
         self.dust.f.crit = None
@@ -479,6 +481,14 @@ class Simulation(dp.Simulation):
                 "max", smax, description="Maximum particle size"
             )
         self.dust.s.max.differentiator = std.dust.smax_deriv
+
+        if self.dust.s._sdot_shrink is None:
+            self.dust.s.addfield('_sdot_shrink', np.zeros(
+                shape1), description="Shrinking rate of s_max via transport")
+
+        if self.dust.s.lim is None:
+            self.dust.s.addfield(
+                'lim', 1e-4, description="Limiting size for shrinking")
 
         # Floor value
         if self.dust.SigmaFloor is None:

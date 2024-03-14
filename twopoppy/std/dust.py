@@ -602,7 +602,7 @@ def smax_deriv(sim, t, smax):
     if smax is None:
         smax = sim.dust.s.max
 
-    return dust_f.smax_deriv(
+    ds_coag = dust_f.smax_deriv(
         sim.dust.v.rel.tot[:, -2, -1],
         sim.dust.rho[:, 2],
         sim.dust.rhos[:, 2],
@@ -611,6 +611,18 @@ def smax_deriv(sim, t, smax):
         sim.dust.v.frag,
         sim.dust.Sigma,
         sim.dust.SigmaFloor)
+
+    ds_shrink = dust_f.smax_deriv_shrink(
+        sim.t.prevstepsize,
+        sim.dust.s.lim,
+        sim.dust.f.crit,
+        smax,
+        sim.dust.Sigma
+    )
+
+    sim.dust.s._sdot_shrink = ds_shrink
+
+    return ds_coag + ds_shrink
 
 
 def S_coag(sim, Sigma=None):
@@ -676,6 +688,33 @@ def S_tot(sim, Sigma=None):
         if Shyd is None:
             Shyd = sim.dust.S.hyd
     return Scoag + Shyd + Sext
+
+
+def S_shrink(sim, Sigma=None):
+    """Function calculates the source terms from dust shrinkage
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    Sigma : Field, optional, default : None
+        Surface density to be used if not None
+
+    Returns
+    -------
+    Sshrink : Field
+        Source terms from dust shrinkage"""
+    if Sigma is None:
+        Sigma = sim.dust.Sigma
+    return dust_f.s_shrink(
+        sim.dust.v.rel.tot[:, -2, -1],
+        sim.dust.rho[:, 2],
+        sim.dust.rhos[:, 2],
+        sim.dust.s.min,
+        sim.dust.s.max,
+        sim.dust.v.frag,
+        Sigma,
+        sim.dust.SigmaFloor)
 
 
 def vrel_brownian_motion(sim):
@@ -787,7 +826,7 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
         r,
         ri,
         sim.gas.Sigma,
-        sim.dust.f.drift * sim.dust.v.rad[:, 1]
+        sim.dust.f.drift * sim.dust.v.rad[:, 2]
     )
     # Setting boundary conditions for the Jacobian of smax*Sigma
     # The boundary condition is constant value on both boundaries
@@ -854,13 +893,32 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
         rhs = np.array(Y0.ravel())
 
     # Add external/explicit source terms to right-hand side
+    dust = Y0._owner.dust
+
+    # Note: s.max.derivative also sets s._sdot_shrink which is used below
+    s_max_deriv = dust.s.max.derivative()
+
     # Sigma
-    S_Sigma_ext = np.zeros_like(Y0._owner.dust.Sigma)
-    S_Sigma_ext[1:-1, ...] = Y0._owner.dust.S.ext[1:-1, ...]
+    aint = np.sqrt(dust.s.min * dust.s.max)
+    xi = np.log(dust.Sigma[:, 1] / dust.Sigma[:, 0]) / \
+        np.log(dust.s.max / aint)
+
+    dSigma_shrink = dust_f.sig_deriv_shrink(
+        dust.Sigma,
+        dust.s.min,
+        dust.s.max,
+        xi,
+        dust.s._sdot_shrink)
+
+    S_Sigma_ext = np.zeros_like(dust.Sigma)
+    S_Sigma_ext[1:-1, ...] += dust.S.ext[1:-1, ...]
+    S_Sigma_ext[1:-1, ...] += dSigma_shrink[1:-1, ...]
+
     # smax*Sigma (product rule)
-    S_smax_expl = np.zeros_like(Y0._owner.dust.s.max)
-    S_smax_expl[1:-1] = Y0._owner.dust.s.max.derivative()[1:-1] * Y0._owner.dust.Sigma[1:-1, 1] \
-        + S_Sigma_ext[1:-1, 1] * Y0._owner.dust.s.max[1:-1]
+    S_smax_expl = np.zeros_like(dust.s.max)
+    S_smax_expl[1:-1] = s_max_deriv[1:-1] * dust.Sigma[1:-1, 1] \
+        + S_Sigma_ext[1:-1, 1] * dust.s.max[1:-1]
+
     # Stitching both parts together
     S = np.hstack((S_Sigma_ext.ravel(), S_smax_expl))
 
@@ -870,7 +928,7 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     N = jac.shape[0]
     eye = sp.identity(N, format="csc")
 
-    A = eye - dx[0] * jac
+    A = eye - dx * jac
 
     A_LU = sp.linalg.splu(A,
                           permc_spec="MMD_AT_PLUS_A",

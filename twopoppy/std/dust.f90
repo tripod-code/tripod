@@ -572,3 +572,93 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, &
     end do
 
 end subroutine smax_deriv
+
+subroutine smax_deriv_shrink(dt, slim, f_crit, smax, Sig, sdot, nr, nm)
+    ! Subroutine calculates the shrinkage source term.
+    !
+    ! Parameters
+    ! ----------
+    ! dt : previous time step
+    ! slim : limiting size for shrinkage
+    ! f_crit : mass fraction below which Sig1 should not drop
+    ! smax : Maximum particle size
+    ! Sig : Dust surface densities
+    ! Nr : Number of radial grid cells
+    !
+    ! Returns
+    ! -------
+    ! sdot(Nr) : Shrinkage source term
+
+    implicit none
+
+    double precision, intent(in) :: dt
+    double precision, intent(in) :: slim
+    double precision, intent(in) :: f_crit
+    double precision, intent(in) :: smax(Nr)
+    double precision, intent(in) :: Sig(Nr, Nm)
+    double precision, intent(out) :: sdot(Nr)
+
+    double precision :: t_dep(Nr)
+    integer, intent(in) :: Nr, Nm
+
+    where (Sig(:, 2) .gt. f_crit * (Sig(:, 1) + Sig(:, 2)))
+        sdot = 0d0
+    elsewhere
+        t_dep = dt * Sig(:, 2) / (f_crit * (Sig(:, 1) + Sig(:, 2)) - Sig(:, 2))
+        sdot = smax / (t_dep + 1d0) * (1d0 - smax / slim)
+    end where
+
+end subroutine smax_deriv_shrink
+
+subroutine Sig_deriv_shrink(Sig, amin, amax, xi, adot_shrink, Sigdot_shrink, Nr, Nm)
+    ! Subroutine calculates the derivative of the dust surface density
+    ! caused by the shrinkage of the maximum particle size.
+    !
+    ! Parameters
+    ! ----------
+    ! Sig(Nr, Nm) : Dust surface densities
+    ! amin(Nr) : Minimal particle size
+    ! amax(Nr) : Maximum particle size
+    ! xi(Nr) : Size distribution exponent (q+4)
+    ! adot_shrink(Nr) : Shrinkage source term for the particle size
+    ! Nr : Number of radial grid cells
+    ! Nm : Number of size bins
+    !
+    ! Returns
+    ! -------
+    ! Sigdot_shrink(Nr) : Shrinkage source term
+
+    implicit none
+
+    double precision, intent(in) :: Sig(Nr, Nm)
+    double precision, intent(in) :: amin(Nr)
+    double precision, intent(in) :: amax(Nr)
+    double precision, intent(in) :: xi(Nr)
+    double precision, intent(in) :: adot_shrink(Nr)
+    double precision, intent(out) :: Sigdot_shrink(Nr,Nm)
+
+    integer, intent(in) :: Nr, Nm
+    double precision :: dum1(Nr)
+    double precision :: dum2(Nr)
+    double precision :: sig_tot(Nr)
+
+    dum1 = (amax * amin)**(0.5*xi)
+
+    sig_tot = Sig(:, 1) + Sig(:, 2)
+
+    where (xi .eq. 0d0)
+        dum2 = sig_tot * (log(amax * amin) - log(amax)) / (amax * (log(amax) - log(amin))**2)
+    elsewhere
+        dum2 = sig_tot * xi * (0.5d0 * amin**xi * dum1 + amax**xi * (0.5d0 * (dum1 - amin**xi))) / (amax * (amax**xi - amin**xi)**2)
+    end where
+
+    where (dum2 .lt. 0d0)
+        dum2 = 0d0
+    end where
+
+    dum2 = dum2 * adot_shrink
+
+    Sigdot_shrink(:, 1) = -dum2
+    Sigdot_shrink(:, 2) = dum2
+
+end subroutine Sig_deriv_shrink
