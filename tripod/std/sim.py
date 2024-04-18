@@ -1,6 +1,6 @@
 '''Module containing standard functions for the main simulation object.'''
 
-from twopoppy import std
+from tripod import std
 import dustpy.std as dp_std
 
 import numpy as np

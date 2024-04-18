@@ -1,4 +1,4 @@
-from twopoppy.simulation import Simulation
+from tripod.simulation import Simulation
 from types import SimpleNamespace
 import numpy as np
 from dustpy.std import dust_f as dp_dust_f
@@ -79,16 +79,18 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
         raise RuntimeError("Unknown data type.")
 
     # Masses
-    Mgas = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2) * SigmaGas[...]).sum(-1)
+    Mgas = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2)
+            * SigmaGas[...]).sum(-1)
     Mdust = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2)
              * SigmaDust[...].sum(-1)).sum(-1)
     try:
-        Mplanet = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2) * SigmaPlanet[...]).sum(-1)
+        Mplanet = (np.pi * (ri[..., 1:] ** 2 -
+                   ri[..., :-1] ** 2) * SigmaPlanet[...]).sum(-1)
     except:
         pass
 
     mi, SigmaDusti, Sti, ai = powerlaw_extrapolation(SigmaDust, smax, xi, rhos, fill, SigmaGas, mfp,
-                                                 nmbpd=7, mmin=1.e-12, mmax=1.e8)
+                                                     nmbpd=7, mmin=1.e-12, mmax=1.e8)
 
     # Transformation of the density distribution
     a = np.array(np.mean(mi[..., 1:] / mi[..., :-1], axis=-1))
@@ -124,7 +126,8 @@ def _readdata_tpp(data, filename="data", extension="hdf5"):
     StMax = np.zeros_like(StFr)
     rho = rhos * fill
     for i in range(int(Nt)):
-        StMax[i] = np.squeeze(dp_dust_f.st_epstein_stokes1(smax[i], mfp[i], rho[i, :, 0], SigmaGas[i]))
+        StMax[i] = np.squeeze(dp_dust_f.st_epstein_stokes1(
+            smax[i], mfp[i], rho[i, :, 0], SigmaGas[i]))
 
     ret["mi"] = mi
     ret["Nmi"] = Nmi
@@ -232,11 +235,13 @@ def _readdata_dp(data, filename="data", extension="hdf5"):
         raise RuntimeError("Unknown data type.")
 
     # Masses
-    Mgas = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2) * SigmaGas[...]).sum(-1)
+    Mgas = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2)
+            * SigmaGas[...]).sum(-1)
     Mdust = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2)
              * SigmaDust[...].sum(-1)).sum(-1)
     try:
-        Mplanet = (np.pi * (ri[..., 1:] ** 2 - ri[..., :-1] ** 2) * SigmaPlanet[...]).sum(-1)
+        Mplanet = (np.pi * (ri[..., 1:] ** 2 -
+                   ri[..., :-1] ** 2) * SigmaPlanet[...]).sum(-1)
     except:
         pass
 
@@ -327,24 +332,28 @@ def powerlaw_extrapolation(sigma_d, s_max, xi, rhos, fill, sigma_g, mfp, nmbpd=7
                 # filling all bins that are strictly below m_max
                 if xi[it, ir] == -4.0:
                     for im in range(i_up):
-                        sig_dm[it, ir, im] = np.log(m_i[it, ir, im + 1] / m_i[it, ir, im])
+                        sig_dm[it, ir, im] = np.log(
+                            m_i[it, ir, im + 1] / m_i[it, ir, im])
                     # filling the bin that contains m_max
-                    sig_dm[it, ir, i_up] = np.log(m_max[it, ir] / m_i[it, ir, i_up])
+                    sig_dm[it, ir, i_up] = np.log(
+                        m_max[it, ir] / m_i[it, ir, i_up])
                 else:
                     for im in range(i_up):
                         sig_dm[it, ir, im] = m_i[it, ir, im + 1] ** ((4. + xi[it, ir]) / 3.) - \
-                                             m_i[it, ir, im] ** ((4. + xi[it, ir]) / 3.)
+                            m_i[it, ir, im] ** ((4. + xi[it, ir]) / 3.)
                     # filling the bin that contains m_max
                     sig_dm[it, ir, i_up] = m_max[it, ir] ** ((4. + xi[it, ir]) / 3.) - \
-                                           m_i[it, ir, i_up] ** ((4. + xi[it, ir]) / 3.)
+                        m_i[it, ir, i_up] ** ((4. + xi[it, ir]) / 3.)
             # absolute values (in case xi < -4)
             sig_dm[it, ir, :] = np.abs(sig_dm[it, ir, :])
             # normalize
-            sig_dm[it, ir, :] = sig_dm[it, ir, :] / sig_dm[it, ir, :].sum() * sigma_d[it, ir]
+            sig_dm[it, ir, :] = sig_dm[it, ir, :] / \
+                sig_dm[it, ir, :].sum() * sigma_d[it, ir]
 
     a_i = (3. / (4. * np.pi * rho_i) * m_i) ** (1. / 3.)
     st_i = np.zeros((nt, nr, nm))
     for i in range(nt):
-        st_i[i] = dp_dust_f.st_epstein_stokes1(a_i[i], mfp[i], rho_i[i], sigma_g[i])
+        st_i[i] = dp_dust_f.st_epstein_stokes1(
+            a_i[i], mfp[i], rho_i[i], sigma_g[i])
 
     return m_i, sig_dm, st_i, a_i

@@ -1,5 +1,5 @@
-import twopoppy.constants as c
-from twopoppy.plot.read_data import _readdata_dp as _readdata
+import tripod.constants as c
+from tripod.plot.read_data import _readdata_dp as _readdata
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -51,7 +51,7 @@ def panel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show
     levels = np.linspace(sd_max - (levels_num - 1), sd_max, levels_num)
 
     out1, out2, out3, out4, out5 = widgets.Output(), widgets.Output(), widgets.Output(), widgets.Output(), \
-                                   widgets.Output()
+        widgets.Output()
 
     with out1:
         width = 6.
@@ -139,7 +139,8 @@ def panel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show
                       horizontalalignment="center",
                       size="large")
         else:
-            ax02.loglog(data.t / c.year, data.Mgas / c.M_sun, c="C0", label="Gas")
+            ax02.loglog(data.t / c.year, data.Mgas /
+                        c.M_sun, c="C0", label="Gas")
             ax02.loglog(data.t / c.year, data.Mdust /
                         c.M_sun, c="C1", label="Dust")
             try:
@@ -179,7 +180,8 @@ def panel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show
         ax11 = fig.add_subplot(111)
         ax11r = ax11.twinx()
 
-        ax11.loglog(data.r[it, ...] / c.au, data.SigmaGas[it, ...], label="Gas")
+        ax11.loglog(data.r[it, ...] / c.au,
+                    data.SigmaGas[it, ...], label="Gas")
         ax11.loglog(data.r[it, ...] / c.au,
                     data.SigmaDust[it, ...].sum(-1), label="Dust")
         try:
@@ -192,7 +194,8 @@ def panel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show
         ax11.set_xlabel("Distance from star [AU]")
         ax11.set_ylabel("$\Sigma$ [g/cm²]")
         ax11.legend()
-        ax11r.loglog(data.r[it, ...] / c.au, data.eps[it, ...], color="C7", lw=1)
+        ax11r.loglog(data.r[it, ...] / c.au,
+                     data.eps[it, ...], color="C7", lw=1)
         ax11r.set_ylim(1.e-5, 1.e1)
         ax11r.set_ylabel("Dust-to-gas ratio")
 
@@ -251,7 +254,7 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
     levels = np.linspace(sd_max - (levels_num - 1), sd_max, levels_num)
 
     out1, out2, out3, out4, out5 = widgets.Output(), widgets.Output(), widgets.Output(), \
-                                   widgets.Output(), widgets.Output()
+        widgets.Output(), widgets.Output()
 
     play = widgets.Play(value=0, min=0, max=int(data.Nt - 1), step=1, interval=2000, description="Press play",
                         disabled=False)
@@ -263,7 +266,8 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
                                continuous_update=False)
     ui_mass = widgets.IntSlider(description='Mass index', value=0, min=0, max=int(data.Nm[0, ...] - 2),
                                 continuous_update=False)
-    display(widgets.HBox([ui_rad, ui_mass], layout=widgets.Layout(width='100%')))
+    display(widgets.HBox([ui_rad, ui_mass],
+            layout=widgets.Layout(width='100%')))
 
     with out1:
         def plot1(it, ir, im):
@@ -320,7 +324,8 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
 
             fig.tight_layout()
 
-        out = widgets.interactive_output(plot1, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot1, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out2:
@@ -342,7 +347,8 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot2, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot2, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out3:
@@ -363,11 +369,13 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
                           horizontalalignment="center",
                           size="large")
             else:
-                ax02.loglog(data.t / c.year, data.Mgas / c.M_sun, c="C0", label="Gas")
+                ax02.loglog(data.t / c.year, data.Mgas /
+                            c.M_sun, c="C0", label="Gas")
                 ax02.loglog(data.t / c.year, data.Mdust /
                             c.M_sun, c="C1", label="Dust")
                 try:
-                    ax02.loglog(data.t / c.year, data.Mplanet / c.M_sun, c="C2", label="Planetesimals")
+                    ax02.loglog(data.t / c.year, data.Mplanet /
+                                c.M_sun, c="C2", label="Planetesimals")
                 except:
                     pass
                 ax02.axvline(data.t[it] / c.year, c="#AAAAAA", lw=1, ls="--")
@@ -380,7 +388,8 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot3, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot3, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out4:
@@ -403,7 +412,8 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot4, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot4, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out5:
@@ -438,7 +448,8 @@ def ipanel_new_dp(data, filename="data", extension="hdf5", im=0, ir=0, it=0, sho
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot5, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot5, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     tab = widgets.Tab(children=[out1, out2, out4, out3, out5],

@@ -1,5 +1,5 @@
-import twopoppy.constants as c
-from twopoppy.plot.read_data import _readdata_tpp as _readdata
+import tripod.constants as c
+from tripod.plot.read_data import _readdata_tpp as _readdata
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
     show_St1 : boolean, optional, default : True
         If True St=1 line is plotted"""
 
-    from twopoppy.plot import __version__
+    from tripod.plot import __version__
 
     data = _readdata(data, filename=filename, extension=extension)
 
@@ -53,7 +53,7 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
     levels = np.linspace(sd_max - (levels_num - 1), sd_max, levels_num)
 
     out1, out2, out3, out4, out5 = widgets.Output(), widgets.Output(), widgets.Output(), \
-                                   widgets.Output(), widgets.Output()
+        widgets.Output(), widgets.Output()
 
     with out1:
         width = 6.
@@ -159,7 +159,8 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
                       horizontalalignment="center",
                       size="large")
         else:
-            ax02.loglog(data.t / c.year, data.Mgas / c.M_sun, c="C0", label="Gas")
+            ax02.loglog(data.t / c.year, data.Mgas /
+                        c.M_sun, c="C0", label="Gas")
             ax02.loglog(data.t / c.year, data.Mdust /
                         c.M_sun, c="C1", label="Dust")
             try:
@@ -203,7 +204,8 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
         ax11 = fig.add_subplot(111)
         ax11r = ax11.twinx()
 
-        ax11.loglog(data.r[it, ...] / c.au, data.SigmaGas[it, ...], label="Gas")
+        ax11.loglog(data.r[it, ...] / c.au,
+                    data.SigmaGas[it, ...], label="Gas")
         ax11.loglog(data.r[it, ...] / c.au,
                     data.SigmaDusti[it, ...].sum(-1), label="Dust")
         try:
@@ -216,7 +218,8 @@ def panel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_li
         ax11.set_xlabel("Distance from star [AU]")
         ax11.set_ylabel("$\Sigma$ [g/cm²]")
         ax11.legend()
-        ax11r.loglog(data.r[it, ...] / c.au, data.eps[it, ...], color="C7", lw=1)
+        ax11r.loglog(data.r[it, ...] / c.au,
+                     data.eps[it, ...], color="C7", lw=1)
         ax11r.set_ylim(1.e-5, 1.e1)
         ax11r.set_ylabel("Dust-to-gas ratio")
 
@@ -256,7 +259,7 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
     show_St1 : boolean, optional, default : True
         If True St=1 line is plotted"""
 
-    from twopoppy.plot import __version__
+    from tripod.plot import __version__
 
     data = _readdata(data, filename=filename, extension=extension)
 
@@ -279,7 +282,7 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
     levels = np.linspace(sd_max - (levels_num - 1), sd_max, levels_num)
 
     out1, out2, out3, out4, out5 = widgets.Output(), widgets.Output(), widgets.Output(), \
-                                   widgets.Output(), widgets.Output()
+        widgets.Output(), widgets.Output()
 
     play = widgets.Play(value=0, min=0, max=int(data.Nt - 1), step=1, interval=2000,
                         description="Press play", disabled=False)
@@ -291,7 +294,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                                continuous_update=False)
     ui_mass = widgets.IntSlider(description='Mass index', value=0, min=0, max=int(data.Nmi[0, ...] - 2),
                                 continuous_update=False)
-    display(widgets.HBox([ui_rad, ui_mass], layout=widgets.Layout(width='100%')))
+    display(widgets.HBox([ui_rad, ui_mass],
+            layout=widgets.Layout(width='100%')))
 
     with out1:
         def plot1(it, ir, im):
@@ -365,7 +369,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                      verticalalignment="bottom")
             plt.show()
 
-        out = widgets.interactive_output(plot1, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot1, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out2:
@@ -375,7 +380,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
             fig = plt.figure(dpi=150., figsize=(width, height))
             ax01 = fig.add_subplot(111)
 
-            ax01.loglog(data.mi[it, ir, ...], data.sigmaDusti[it, ir, :], c="C3")
+            ax01.loglog(data.mi[it, ir, ...],
+                        data.sigmaDusti[it, ir, :], c="C3")
             ax01.axvline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
             ax01.set_xlim(data.mi[it, ir, 0], data.mi[it, ir, -1])
             ylim1 = np.ceil(np.log10(np.max(data.sigmaDusti[it, ir, :])))
@@ -389,7 +395,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                      verticalalignment="bottom")
             plt.show()
 
-        out = widgets.interactive_output(plot2, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot2, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out3:
@@ -410,14 +417,17 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                           horizontalalignment="center",
                           size="large")
             else:
-                ax02.loglog(data.t / c.year, data.Mgas / c.M_sun, c="C0", label="Gas")
+                ax02.loglog(data.t / c.year, data.Mgas /
+                            c.M_sun, c="C0", label="Gas")
                 ax02.loglog(data.t / c.year, data.Mdust /
                             c.M_sun, c="C1", label="Dust")
                 try:
-                    ax02.loglog(data.t / c.year, data.Mplanet / c.M_sun, c="C2", label="Planetesimals")
+                    ax02.loglog(data.t / c.year, data.Mplanet /
+                                c.M_sun, c="C2", label="Planetesimals")
                 except:
                     pass
-                plt02vl = ax02.axvline(data.t[it] / c.year, c="#AAAAAA", lw=1, ls="--")
+                plt02vl = ax02.axvline(
+                    data.t[it] / c.year, c="#AAAAAA", lw=1, ls="--")
                 ax02.set_xlim(data.t[1] / c.year, data.t[-1] / c.year)
                 ax02.set_ylim(10. ** (Mmax - 6.), 10. ** Mmax)
                 ax02.legend()
@@ -429,7 +439,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                      verticalalignment="bottom")
             plt.show()
 
-        out = widgets.interactive_output(plot3, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot3, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out4:
@@ -454,7 +465,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                      verticalalignment="bottom")
             plt.show()
 
-        out = widgets.interactive_output(plot4, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot4, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out5:
@@ -491,7 +503,8 @@ def ipanel_new(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_l
                      verticalalignment="bottom")
             plt.show()
 
-        out = widgets.interactive_output(plot5, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot5, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     tab = widgets.Tab(children=[out1, out2, out4, out3, out5],

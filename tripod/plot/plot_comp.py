@@ -1,6 +1,6 @@
-import twopoppy.constants as c
-from twopoppy.plot.read_data import _readdata_tpp
-from twopoppy.plot.read_data import _readdata_dp
+import tripod.constants as c
+from tripod.plot.read_data import _readdata_tpp
+from tripod.plot.read_data import _readdata_dp
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -62,7 +62,8 @@ def panel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0,
     Mmax_dp = np.ceil(np.log10(data_dp.Mgas.max() / c.M_sun)) + 1
     Mmax = max(Mmax_tpp, Mmax_dp)
 
-    out1, out2, out3, out4 = widgets.Output(), widgets.Output(), widgets.Output(), widgets.Output()
+    out1, out2, out3, out4 = widgets.Output(
+    ), widgets.Output(), widgets.Output(), widgets.Output()
 
     with out1:
         width = 6.
@@ -70,8 +71,10 @@ def panel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0,
         fig = plt.figure(dpi=150., figsize=(width, height))
         ax01 = fig.add_subplot(111)
 
-        ax01.loglog(data_tpp.mi[it, ir, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
-        ax01.loglog(data_dp.m[it, ...], data_dp.sigmaDust[it, ir, :], c="C6", label="dp")
+        ax01.loglog(data_tpp.mi[it, ir, ...],
+                    data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
+        ax01.loglog(data_dp.m[it, ...],
+                    data_dp.sigmaDust[it, ir, :], c="C6", label="dp")
         ax01.set_xlim(data_dp.m[it, 0], data_dp.m[it, -1])
         ax01.set_ylim(10. ** (sd_max - 6.), 10. ** sd_max)
         ax01.set_xlabel("Particle mass [g]")
@@ -97,13 +100,19 @@ def panel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0,
                       horizontalalignment="center",
                       size="large")
         else:
-            ax02.loglog(data_tpp.t / c.year, data_tpp.Mgas / c.M_sun, c="C0", label="Gas tpp")
-            ax02.loglog(data_dp.t / c.year, data_dp.Mgas / c.M_sun, c="C3", label="Gas dp")
-            ax02.loglog(data_tpp.t / c.year, data_tpp.Mdust / c.M_sun, c="C1", label="Dust tpp")
-            ax02.loglog(data_dp.t / c.year, data_dp.Mdust / c.M_sun, c="C4", label="Dust dp")
+            ax02.loglog(data_tpp.t / c.year, data_tpp.Mgas /
+                        c.M_sun, c="C0", label="Gas tpp")
+            ax02.loglog(data_dp.t / c.year, data_dp.Mgas /
+                        c.M_sun, c="C3", label="Gas dp")
+            ax02.loglog(data_tpp.t / c.year, data_tpp.Mdust /
+                        c.M_sun, c="C1", label="Dust tpp")
+            ax02.loglog(data_dp.t / c.year, data_dp.Mdust /
+                        c.M_sun, c="C4", label="Dust dp")
             try:
-                ax02.loglog(data_tpp.t / c.year, data_tpp.Mplanet / c.M_sun, c="C2", label="Planetesimals tpp")
-                ax02.loglog(data_dp.t / c.year, data_dp.Mplanet / c.M_sun, c="C5", label="Planetesimals dp")
+                ax02.loglog(data_tpp.t / c.year, data_tpp.Mplanet /
+                            c.M_sun, c="C2", label="Planetesimals tpp")
+                ax02.loglog(data_dp.t / c.year, data_dp.Mplanet /
+                            c.M_sun, c="C5", label="Planetesimals dp")
             except:
                 pass
             ax02.axvline(data_dp.t[it] / c.year, c="#AAAAAA", lw=1, ls="--")
@@ -122,8 +131,10 @@ def panel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0,
         fig = plt.figure(dpi=150., figsize=(width, height))
         ax10 = fig.add_subplot(111)
 
-        ax10.loglog(data_tpp.r[it, ...] / c.au, data_tpp.sigmaDusti[it, :, im], c="C3", label="tpp")
-        ax10.loglog(data_dp.r[it, ...] / c.au, data_dp.sigmaDust[it, :, im], c="C6", label="dp")
+        ax10.loglog(data_tpp.r[it, ...] / c.au,
+                    data_tpp.sigmaDusti[it, :, im], c="C3", label="tpp")
+        ax10.loglog(data_dp.r[it, ...] / c.au,
+                    data_dp.sigmaDust[it, :, im], c="C6", label="dp")
         ax10.set_xlim(data_dp.r[it, 0] / c.au, data_dp.r[it, -1] / c.au)
         ax10.set_ylim(10. ** (sd_max - 6.), 10. ** sd_max)
         ax10.set_xlabel("Distance from star [au]")
@@ -140,21 +151,29 @@ def panel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0,
         ax11 = fig.add_subplot(111)
         ax11r = ax11.twinx()
 
-        ax11.loglog(data_tpp.r[it, ...] / c.au, data_tpp.SigmaGas[it, ...], label="Gas tpp")
-        ax11.loglog(data_dp.r[it, ...] / c.au, data_dp.SigmaGas[it, ...], label="Gas dp")
-        ax11.loglog(data_tpp.r[it, ...] / c.au, data_tpp.SigmaDusti[it, ...].sum(-1), label="Dust tpp")
-        ax11.loglog(data_dp.r[it, ...] / c.au, data_dp.SigmaDust[it, ...].sum(-1), label="Dust dp")
+        ax11.loglog(data_tpp.r[it, ...] / c.au,
+                    data_tpp.SigmaGas[it, ...], label="Gas tpp")
+        ax11.loglog(data_dp.r[it, ...] / c.au,
+                    data_dp.SigmaGas[it, ...], label="Gas dp")
+        ax11.loglog(data_tpp.r[it, ...] / c.au,
+                    data_tpp.SigmaDusti[it, ...].sum(-1), label="Dust tpp")
+        ax11.loglog(data_dp.r[it, ...] / c.au,
+                    data_dp.SigmaDust[it, ...].sum(-1), label="Dust dp")
         try:
-            ax11.loglog(data_tpp.r[it, ...] / c.au, data_tpp.SigmaPlanet[it, ...], label="Planetesimals tpp")
-            ax11.loglog(data_dp.r[it, ...] / c.au, data_dp.SigmaPlanet[it, ...], label="Planetesimals dp")
+            ax11.loglog(
+                data_tpp.r[it, ...] / c.au, data_tpp.SigmaPlanet[it, ...], label="Planetesimals tpp")
+            ax11.loglog(
+                data_dp.r[it, ...] / c.au, data_dp.SigmaPlanet[it, ...], label="Planetesimals dp")
         except:
             pass
         ax11.set_xlim(data_dp.r[it, 0] / c.au, data_dp.r[it, -1] / c.au)
         ax11.set_ylim(10. ** (sg_max - 6), 10. ** sg_max)
         ax11.set_xlabel("Distance from star [AU]")
         ax11.set_ylabel("$\Sigma$ [g/cm²]")
-        ax11r.loglog(data_tpp.r[it, ...] / c.au, data_tpp.eps[it, ...], color="C7", lw=1, label="tpp")
-        ax11r.loglog(data_dp.r[it, ...] / c.au, data_dp.eps[it, ...], color="C8", lw=1, label="dp")
+        ax11r.loglog(data_tpp.r[it, ...] / c.au,
+                     data_tpp.eps[it, ...], color="C7", lw=1, label="tpp")
+        ax11r.loglog(data_dp.r[it, ...] / c.au,
+                     data_dp.eps[it, ...], color="C8", lw=1, label="dp")
         ax11r.set_ylim(1.e-5, 1.e1)
         ax11r.set_ylabel("Dust-to-gas ratio")
         ax11.legend()
@@ -223,7 +242,8 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
     Mmax_dp = np.ceil(np.log10(data_dp.Mgas.max() / c.M_sun)) + 1
     Mmax = max(Mmax_tpp, Mmax_dp)
 
-    out1, out2, out3, out4 = widgets.Output(), widgets.Output(), widgets.Output(), widgets.Output()
+    out1, out2, out3, out4 = widgets.Output(
+    ), widgets.Output(), widgets.Output(), widgets.Output()
 
     play = widgets.Play(value=0, min=0, max=int(data_dp.Nt - 1), step=1, interval=2000, description="Press play",
                         disabled=False)
@@ -235,7 +255,8 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
                                continuous_update=False)
     ui_mass = widgets.IntSlider(description='Mass index', value=0, min=0, max=int(data_dp.Nm[0, ...] - 2),
                                 continuous_update=False)
-    display(widgets.HBox([ui_rad, ui_mass], layout=widgets.Layout(width='100%')))
+    display(widgets.HBox([ui_rad, ui_mass],
+            layout=widgets.Layout(width='100%')))
 
     with out1:
         def plot1(it, ir, im):
@@ -244,8 +265,10 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig = plt.figure(dpi=150., figsize=(width, height))
             ax01 = fig.add_subplot(111)
 
-            ax01.loglog(data_tpp.mi[it, ir, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
-            ax01.loglog(data_dp.m[it, ...], data_dp.sigmaDust[it, ir, :], c="C6", label="dp")
+            ax01.loglog(
+                data_tpp.mi[it, ir, ...], data_tpp.sigmaDusti[it, ir, :], c="C3", label="tpp")
+            ax01.loglog(
+                data_dp.m[it, ...], data_dp.sigmaDust[it, ir, :], c="C6", label="dp")
             ax01.axvline(data_dp.m[it, im], color="#AAAAAA", lw=1, ls="--")
             ax01.set_xlim(data_dp.m[it, 0], data_dp.m[it, -1])
             ylim1 = np.ceil(np.log10(np.max(data_dp.sigmaDust[it, ir, :])))
@@ -258,7 +281,8 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot1, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot1, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out2:
@@ -279,16 +303,23 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
                           horizontalalignment="center",
                           size="large")
             else:
-                ax02.loglog(data_tpp.t / c.year, data_tpp.Mgas / c.M_sun, c="C0", label="Gas tpp")
-                ax02.loglog(data_dp.t / c.year, data_dp.Mgas / c.M_sun, c="C3", label="Gas dp")
-                ax02.loglog(data_tpp.t / c.year, data_tpp.Mdust / c.M_sun, c="C1", label="Dust tpp")
-                ax02.loglog(data_dp.t / c.year, data_dp.Mdust / c.M_sun, c="C4", label="Dust dp")
+                ax02.loglog(data_tpp.t / c.year, data_tpp.Mgas /
+                            c.M_sun, c="C0", label="Gas tpp")
+                ax02.loglog(data_dp.t / c.year, data_dp.Mgas /
+                            c.M_sun, c="C3", label="Gas dp")
+                ax02.loglog(data_tpp.t / c.year, data_tpp.Mdust /
+                            c.M_sun, c="C1", label="Dust tpp")
+                ax02.loglog(data_dp.t / c.year, data_dp.Mdust /
+                            c.M_sun, c="C4", label="Dust dp")
                 try:
-                    ax02.loglog(data_tpp.t / c.year, data_tpp.Mplanet / c.M_sun, c="C2", label="Planetesimals tpp")
-                    ax02.loglog(data_dp.t / c.year, data_dp.Mplanet / c.M_sun, c="C5", label="Planetesimals dp")
+                    ax02.loglog(data_tpp.t / c.year, data_tpp.Mplanet /
+                                c.M_sun, c="C2", label="Planetesimals tpp")
+                    ax02.loglog(data_dp.t / c.year, data_dp.Mplanet /
+                                c.M_sun, c="C5", label="Planetesimals dp")
                 except:
                     pass
-                ax02.axvline(data_dp.t[it] / c.year, c="#AAAAAA", lw=1, ls="--")
+                ax02.axvline(data_dp.t[it] / c.year,
+                             c="#AAAAAA", lw=1, ls="--")
                 ax02.set_xlim(data_dp.t[1] / c.year, data_dp.t[-1] / c.year)
                 ax02.set_ylim(10. ** (Mmax - 6.), 10. ** Mmax)
                 ax02.legend()
@@ -298,7 +329,8 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot2, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot2, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out3:
@@ -308,9 +340,12 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig = plt.figure(dpi=150., figsize=(width, height))
             ax10 = fig.add_subplot(111)
 
-            ax10.loglog(data_tpp.r[it, ...] / c.au, data_tpp.sigmaDusti[it, :, im], c="C3", label="tpp")
-            ax10.loglog(data_dp.r[it, ...] / c.au, data_dp.sigmaDust[it, :, im], c="C6", label="dp")
-            ax10.axvline(data_dp.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
+            ax10.loglog(
+                data_tpp.r[it, ...] / c.au, data_tpp.sigmaDusti[it, :, im], c="C3", label="tpp")
+            ax10.loglog(data_dp.r[it, ...] / c.au,
+                        data_dp.sigmaDust[it, :, im], c="C6", label="dp")
+            ax10.axvline(data_dp.r[it, ir] / c.au,
+                         color="#AAAAAA", lw=1, ls="--")
             ax10.set_xlim(data_dp.r[it, 0] / c.au, data_dp.r[it, -1] / c.au)
             ylim1 = np.ceil(np.log10(np.max(data_dp.sigmaDust[it, :, im])))
             ylim0 = ylim1 - 6.
@@ -322,7 +357,8 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot3, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot3, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     with out4:
@@ -334,22 +370,31 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             ax11 = fig.add_subplot(111)
             ax11r = ax11.twinx()
 
-            ax11.loglog(data_tpp.r[it, ...] / c.au, data_tpp.SigmaGas[it, ...], label="Gas tpp")
-            ax11.loglog(data_dp.r[it, ...] / c.au, data_dp.SigmaGas[it, ...], label="Gas dp")
-            ax11.loglog(data_tpp.r[it, ...] / c.au, data_tpp.SigmaDusti[it, ...].sum(-1), label="Dust tpp")
-            ax11.loglog(data_dp.r[it, ...] / c.au, data_dp.SigmaDust[it, ...].sum(-1), label="Dust dp")
+            ax11.loglog(data_tpp.r[it, ...] / c.au,
+                        data_tpp.SigmaGas[it, ...], label="Gas tpp")
+            ax11.loglog(data_dp.r[it, ...] / c.au,
+                        data_dp.SigmaGas[it, ...], label="Gas dp")
+            ax11.loglog(
+                data_tpp.r[it, ...] / c.au, data_tpp.SigmaDusti[it, ...].sum(-1), label="Dust tpp")
+            ax11.loglog(
+                data_dp.r[it, ...] / c.au, data_dp.SigmaDust[it, ...].sum(-1), label="Dust dp")
             try:
-                ax11.loglog(data_tpp.r[it, ...] / c.au, data_tpp.SigmaPlanet[it, ...], label="Planetesimals tpp")
-                ax11.loglog(data_dp.r[it, ...] / c.au, data_dp.SigmaPlanet[it, ...], label="Planetesimals dp")
+                ax11.loglog(
+                    data_tpp.r[it, ...] / c.au, data_tpp.SigmaPlanet[it, ...], label="Planetesimals tpp")
+                ax11.loglog(
+                    data_dp.r[it, ...] / c.au, data_dp.SigmaPlanet[it, ...], label="Planetesimals dp")
             except:
                 pass
-            ax11.axvline(data_dp.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
+            ax11.axvline(data_dp.r[it, ir] / c.au,
+                         color="#AAAAAA", lw=1, ls="--")
             ax11.set_xlim(data_dp.r[it, 0] / c.au, data_dp.r[it, -1] / c.au)
             ax11.set_ylim(10. ** (sg_max - 6), 10. ** sg_max)
             ax11.set_xlabel("Distance from star [AU]")
             ax11.set_ylabel("$\Sigma$ [g/cm²]")
-            ax11r.loglog(data_tpp.r[it, ...] / c.au, data_tpp.eps[it, ...], color="C7", lw=1, label="tpp")
-            ax11r.loglog(data_dp.r[it, ...] / c.au, data_dp.eps[it, ...], color="C8", lw=1, label="dp")
+            ax11r.loglog(
+                data_tpp.r[it, ...] / c.au, data_tpp.eps[it, ...], color="C7", lw=1, label="tpp")
+            ax11r.loglog(
+                data_dp.r[it, ...] / c.au, data_dp.eps[it, ...], color="C8", lw=1, label="dp")
             ax11r.set_ylim(1.e-5, 1.e1)
             ax11r.set_ylabel("Dust-to-gas ratio")
             ax11.legend()
@@ -357,7 +402,8 @@ def ipanel_comp(tpp_data, dp_data, filename="data", extension="hdf5", im=0, ir=0
             fig.tight_layout()
             plt.show()
 
-        out = widgets.interactive_output(plot4, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
+        out = widgets.interactive_output(
+            plot4, {'it': ui_temp, 'ir': ui_rad, 'im': ui_mass})
         display(widgets.VBox([out], layout=widgets.Layout(width='100%')))
 
     tab = widgets.Tab(children=[out4, out2, out1, out3],

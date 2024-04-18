@@ -3,7 +3,7 @@
 import dustpy.constants as c
 from dustpy.std import dust_f as dp_dust_f
 import dustpy.std.dust as dp_dust
-from twopoppy.std import dust_f
+from tripod.std import dust_f
 
 from simframe.integration import Scheme
 

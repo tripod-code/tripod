@@ -1,5 +1,5 @@
-import twopoppy.constants as c
-from twopoppy.plot.read_data import _readdata_tpp as _readdata
+import tripod.constants as c
+from tripod.plot.read_data import _readdata_tpp as _readdata
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ def panel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limits
     show_St1 : boolean, optional, default : True
         If True St=1 line is plotted"""
 
-    from twopoppy.plot import __version__
+    from tripod.plot import __version__
 
     data = _readdata(data, filename=filename, extension=extension)
 
@@ -177,7 +177,7 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
     show_St1 : boolean, optional, default : True
         If True St=1 line is plotted"""
 
-    from twopoppy.plot import __version__
+    from tripod.plot import __version__
 
     data = _readdata(data, filename=filename, extension=extension)
 
@@ -244,7 +244,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
                                )
         plt00FrCollections = plt00Fr.collections[:]
     plt00hl = ax00.axhline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
-    plt00vl = ax00.axvline(data.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
+    plt00vl = ax00.axvline(data.r[it, ir] / c.au,
+                           color="#AAAAAA", lw=1, ls="--")
 
     cbar00 = plt.colorbar(plt00, ax=ax00)
     cbar00.ax.set_ylabel("$\sigma_\mathrm{d}$ [g/cm²]")
@@ -257,7 +258,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
     ax00.set_xlabel("Distance from star [AU]")
     ax00.set_ylabel("Particle mass [g]")
 
-    plt01 = ax01.loglog(data.mi[it, ir, ...], data.sigmaDusti[it, ir, :], c="C3")
+    plt01 = ax01.loglog(data.mi[it, ir, ...],
+                        data.sigmaDusti[it, ir, :], c="C3")
     plt01vl = ax01.axvline(data.mi[it, ir, im], color="#AAAAAA", lw=1, ls="--")
     ax01.set_xlim(data.mi[it, ir, 0], data.mi[it, ir, -1])
     ylim1 = np.ceil(np.log10(np.max(data.sigmaDusti[it, ir, :])))
@@ -288,7 +290,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
 
     plt10 = ax10.loglog(data.r[it, ...] / c.au,
                         data.sigmaDusti[it, :, im], c="C3")
-    plt10vl = ax10.axvline(data.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
+    plt10vl = ax10.axvline(data.r[it, ir] / c.au,
+                           color="#AAAAAA", lw=1, ls="--")
     ax10.set_xlim(data.r[it, 0] / c.au, data.r[it, -1] / c.au)
     ylim1 = np.ceil(np.log10(np.max(data.sigmaDusti[it, :, im])))
     ylim0 = ylim1 - 6.
@@ -300,7 +303,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
                          data.SigmaGas[it, ...], label="Gas")
     plt11d = ax11.loglog(data.r[it, ...] / c.au,
                          data.SigmaDusti[it, ...].sum(-1), label="Dust")
-    plt11vl = ax11.axvline(data.r[it, ir] / c.au, color="#AAAAAA", lw=1, ls="--")
+    plt11vl = ax11.axvline(data.r[it, ir] / c.au,
+                           color="#AAAAAA", lw=1, ls="--")
     ax11.set_xlim(data.r[it, 0] / c.au, data.r[it, -1] / c.au)
     ax11.set_ylim(10. ** (sg_max - 6), 10. ** sg_max)
     ax11.set_xlabel("Distance from star [AU]")
@@ -349,7 +353,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
         it = 0
         if data.Nt > 2:
             it = int(np.floor(sliderTime.val))
-            axSliderTime.set_title("t = {:9.3e} yr".format(data.t[it] / c.year))
+            axSliderTime.set_title(
+                "t = {:9.3e} yr".format(data.t[it] / c.year))
         im = int(np.floor(sliderMass.val))
         ir = int(np.floor(sliderDist.val))
         axSliderMass.set_title("m = {:9.3e} g".format(data.mi[it, ir, im]))
@@ -386,7 +391,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
                 plt00DrCollections.remove(row)
             plt00Dr = ax00.contour(data.r[it, ...] / c.au,
                                    data.mi[it, ir, ...],
-                                   (data.Sti - data.StDr[..., None])[it, ...].T,
+                                   (data.Sti -
+                                    data.StDr[..., None])[it, ...].T,
                                    levels=[0.],
                                    colors="C2",
                                    linewidths=1
@@ -398,7 +404,8 @@ def ipanel(data, filename="data", extension="hdf5", im=0, ir=0, it=0, show_limit
                 plt00FrCollections.remove(row)
             plt00Fr = ax00.contour(data.r[it, ...] / c.au,
                                    data.mi[it, ir, ...],
-                                   (data.Sti - data.StFr[..., None])[it, ...].T,
+                                   (data.Sti -
+                                    data.StFr[..., None])[it, ...].T,
                                    levels=[0.],
                                    colors="C0",
                                    linewidths=1
