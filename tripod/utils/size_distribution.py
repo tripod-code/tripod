@@ -41,7 +41,8 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
         particle size grid (interfaces)
 
     sig_da : array
-        particle size distribution of size (len(sigma_d), na)
+        particle size distribution of size (len(sigma_d), na),
+        units of g/cm^2, so integrated over the bins.
     """
 
     if agrid_min is None:
