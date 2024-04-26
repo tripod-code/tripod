@@ -1,7 +1,9 @@
 '''Package containing utility classes and functions used in the simulation.'''
 
-from simframe.io.writers import hdf5writer
+from tripod.utils.read_data import read_data
 from tripod.utils.size_distribution import get_size_distribution
 
-__all__ = ["hdf5writer"]
-__version__ = None
+__all__ = [
+    "get_size_distribution",
+    "read_data",
+]
