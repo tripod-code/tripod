@@ -8,6 +8,33 @@ from types import SimpleNamespace
 
 
 def read_data(data, filename="data", extension="hdf5", Na=50):
+    """
+    Function returns a SimpleNamespace with the most useful
+    data that can be used for plotting or other purposes.
+    This avoids reading the entirety of data files.
+    It also return data fields with the appendix ``_recon``
+    that contains values related to the reconstructed size
+    distributions.
+
+    Parameters
+    ----------
+    data : str | tripod.Simulation
+        Either a path to the data directory or a TriPoD
+        simulation frame
+    filename : str, optional, default: "data"
+        Stem of the data files in the data directory
+    extension : str, optional, default: "hdf5"
+        File extension of the data file in the data directory
+    Na : int, optional, default: 50
+        Number of size bins used for the reconstructed
+        size distribution
+
+    Returns
+    -------
+    data : SimpleNamespace
+        SimpleNamespace with the extracted and reconstructed
+        data fields
+    """
 
     if isinstance(data, Simulation):
 
