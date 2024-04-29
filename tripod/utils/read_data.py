@@ -115,8 +115,6 @@ def read_data(data, filename="data", extension="hdf5", Na=50):
         )
         a_recon[i, ...] = a
         SigmaDust_recon[i, ...] = sig_da
-        imin = sig_da.argmin()
-        idx = np.unravel_index(imin, sig_da.shape)
     # Reconstructed bulk density
     rhos_recon = get_rhos_simple(a_recon, rhos[..., [0, 2]], smin, smax)
     fill_recon = get_rhos_simple(a_recon, fill[..., [0, 2]], smin, smax)
