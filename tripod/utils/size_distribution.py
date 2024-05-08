@@ -1,6 +1,61 @@
 import numpy as np
 
 
+def get_rhos_simple(a, rhos, smin, smax):
+    """
+    Function to compute the bulk density of the reconstructed particle sizes.
+    This simple model assumes the bulk density to be constant within the
+    two original particle size bins.
+
+    Parameters
+    ----------
+    a : array-like
+        Particle size for which bulk densities should be computed
+    rhos : array-like
+        Bulk densities in the two population model
+    smin : array-like
+        Minimum particle sizes
+    smax : array-like
+        Maximum particle sizes
+
+    Returns
+    -------
+    rhos_recon : array-like
+        Reconstructed particle bulk densities
+    """
+    sint = np.sqrt(smin*smax)
+    rhos_recon = np.ones_like(a[:, None, :]) * rhos[..., 1, None]
+    rhos_recon = np.where(
+        a[:, None, :] < sint[..., None],
+        rhos[..., 0, None],
+        rhos_recon
+    )
+    return rhos_recon
+
+
+def get_q(Sigma, smin, smax):
+    """
+    Function computes the power law exponent of the size distribution
+    n(a) da = a^q da
+
+    Parameters
+    ----------
+    Sigma : array-like
+        Dust surface densities
+    smin : array-like
+        Minimum particle sizes
+    smax : array-like
+        Maximum particle sizes
+
+    Returns
+    -------
+    q : array-like
+        Size distribution exponent
+    """
+    sint = np.sqrt(smin*smax)
+    return -(np.log(Sigma[..., 1]/Sigma[..., 0]) / np.log(smax/sint) - 4.)
+
+
 def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_max=None):
     """
     Makes a power-law size distribution up to a_max, normalized to the given surface density
@@ -64,6 +119,7 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
 
         if a_max[ir] <= agrid_min:
             sig_da[ir, 0] = 1
+            i_up = 0
         else:
             i_up = np.where(a_i < a_max[ir])[0][-1]
 
@@ -85,6 +141,7 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
                     a_i[i_up]**(4 - q[ir])
 
         # normalize
-        sig_da[ir, :] = sig_da[ir, :] / sig_da[ir, :].sum() * sigma_d[ir]
+        sig_da[ir, :i_up+1] = sig_da[ir, :i_up+1] / \
+            sig_da[ir, :i_up+1].sum() * sigma_d[ir]
 
     return a, a_i, sig_da
