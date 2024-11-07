@@ -49,8 +49,6 @@ class Simulation(dp.Simulation):
             "f", description="Fudge factors")
         self.dust.f.crit = None
         self.dust.f.drift = None
-        self.dust.f.dvdrift = None
-        self.dust.f.dvturb = None
         self.dust.f.dv = None
         self.dust.f.updater = ["dv"]
         self.dust.p.drift = None
@@ -434,7 +432,7 @@ class Simulation(dp.Simulation):
             )
         if self.dust.q.sweep is None:
             self.dust.q.addfield(
-                "sweep", -2.5, description="Size distribution exponent in the sweep-up regime"
+                "sweep", -3.0, description="Size distribution exponent in the sweep-up regime"
             )
         # Specific particle sizes
         if self.dust.s.min is None:
@@ -446,25 +444,17 @@ class Simulation(dp.Simulation):
         # Particle size variation factors
         if self.dust.f.crit is None:
             self.dust.f.addfield(
-                "crit", 0.475, description="Critical mass depletion coefficient for shrinking"
+                "crit", 0.425, description="Critical mass depletion coefficient for shrinking"
             )
         if self.dust.f.drift is None:
             self.dust.f.addfield(
-                "drift", 0.7, description="Drift velocity calibration factor"
+                "drift", 0.8, description="Drift velocity calibration factor"
             )
-        if self.dust.f.dvturb is None:
-            self.dust.f.addfield(
-                "dvturb", 0.1, description="Collision speed parameter in turb.-dom. regime"
-            )
-        if self.dust.f.dvdrift is None:
-            self.dust.f.addfield(
-                "dvdrift", 0.2, description="collision speed parameter in drift-dom. regime"
-            )
+
         if self.dust.f.dv is None:
             self.dust.f.addfield(
-                "dv", 0.15 * np.ones(shape1), description="effective collision speed parameter"
+                "dv", 0.4, description="effective collision speed parameter"
             )
-            self.dust.f.dv.updater = std.dust.f_dv
 
         # Initialize dust quantities partly to calculate Sigma
         try:

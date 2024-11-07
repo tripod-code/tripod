@@ -1,6 +1,6 @@
 subroutine calculate_a(smin, smax, q, fudge, a, Nr, Nm)
     ! Subroutine calculates the particle sizes.
-    ! a = [a0, fudge * a1, a1, 0.5 * amax, amax]
+    ! a = [a0, fudge * a1, a1, fudge * amax, amax]
     !
     ! This way this array can be passed to the dustpy function
     ! that computes relative velocities.
@@ -57,7 +57,7 @@ subroutine calculate_a(smin, smax, q, fudge, a, Nr, Nm)
             a(i, 3) = R1(i) * sint(i) * (dum**(-qp5(i)) - 1.d0) / (dum**(-qp4(i)) - 1.d0)
         end if
         a(i, 2) = fudge * a(i, 3)
-        a(i, 4) = 0.5 * smax(i)
+        a(i, 4) = fudge * smax(i)
         a(i, 5) = smax(i)
     end do
 

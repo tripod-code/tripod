@@ -70,7 +70,9 @@ def dt_smax(sim):
     # TODO: double check if this makes sense
 
     # Ignoring boundaries.
-    smax_dot = sim.dust.s.max.derivative()[1:-1]
+    # smax_dot = sim.dust.s.max.a()[1:-1]
+    # here we only take the derivative due to coagulation into account
+    smax_dot = sim.dust.s._sdot_coag[1:-1]
     dt = sim.dust.s.max[1:-1] / (np.abs(smax_dot) + 1e-100)
 
     return dt.min()
@@ -420,9 +422,7 @@ def a(sim):
     a : Field
         Particle sizes"""
     # interpolate between drift and turbulence dominated pre-factor
-    fudge_dv = sim.dust.f.dvdrift * sim.dust.p.drift + \
-        sim.dust.f.dvturb * (1.0 - sim.dust.p.drift)
-    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.q.eff, fudge_dv, sim.grid._Nm_long)
+    return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.q.eff, sim.dust.f.fudge_dv, sim.grid._Nm_long)
 
 
 def F_adv(sim, Sigma=None):
@@ -625,6 +625,7 @@ def smax_deriv(sim, t, smax):
     )
 
     sim.dust.s._sdot_shrink = ds_shrink
+    sim.dust.s._sdot_coag = ds_coag
 
     return ds_coag + ds_shrink
 
@@ -790,16 +791,6 @@ def p_drift(sim):
 
     # Eq. A.4
     return 0.5 * (1.0 - (f_dt**6 - 1.0) / (f_dt**6 + 1.0))
-
-
-def f_dv(sim):
-    """Calculate the fudge factor for the relative velocities.
-
-    Parameters
-    ----------
-    sim : simulation frame
-    """
-    return sim.dust.p.drift * sim.dust.f.dvdrift + (1.0 - sim.dust.p.drift) * sim.dust.f.dvturb
 
 
 def Y_jacobian(sim, x, dx=None, *args, **kwargs):
