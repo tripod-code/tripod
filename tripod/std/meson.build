@@ -18,7 +18,6 @@ dust_source = custom_target(
     output: [
         'dust_fmodule.c',
         'dust_f-f2pywrappers.f',
-        'dust_f-f2pywrappers2.f90',
     ],
     command: [
         py3,
