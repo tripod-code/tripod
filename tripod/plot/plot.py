@@ -70,6 +70,7 @@ def panel(data,
     ax10 = fig.add_subplot(234)
     ax11 = fig.add_subplot(235)
     ax11r = ax11.twinx()
+    ax10r = ax10.twinx()
 
     # Density distribution
     plt00 = ax00.contourf(data.grid.r[it, ...]/c.au,
@@ -163,6 +164,9 @@ def panel(data,
     ax10.set_ylim(10.**(sd_max-6.), 10.**sd_max)
     ax10.set_xlabel("Distance from star [au]")
     ax10.set_ylabel(r"$\sigma_\mathrm{d}$ [g/cm²]")
+    ax10r.set_ylabel(r"q")
+    ax10r.plot(data.grid.r[it, ...]/c.au,
+                data.dust.q[it, :], c="b" )
 
     ax11.loglog(data.grid.r[it, ...]/c.au,
                 data.gas.Sigma[it, ...], label="Gas")
@@ -179,6 +183,8 @@ def panel(data,
     ax11r.set_ylabel("Dust-to-gas ratio")
 
     fig.set_layout_engine("tight")
+    fig.text(0.99, 0.2,"%.2e Myr it = %i"%(data.t[it]/c.year/1e6, it),horizontalalignment="right",
+             verticalalignment="bottom")
 
     fig.text(0.99, 0.01, "TriPoD v"+__version__, horizontalalignment="right",
              verticalalignment="bottom")

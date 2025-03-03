@@ -43,6 +43,9 @@ class Simulation(dp.Simulation):
         self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
+        self.dust.s.addgroup("boundary", description="boundary conditions of smax")
+        self.dust.s.boundary.inner = None
+        self.dust.s.boundary.outer = None
         self.dust.s.lim = None
         self.dust.addgroup(
             "f", description="Fudge factors")
@@ -151,6 +154,19 @@ class Simulation(dp.Simulation):
 
         self._makeradialgrid()
 
+    def _timestep_accounting(self):
+        shape1 = (int(self.grid.Nr))
+        # Radial grid and long particle grid
+        shape2 = (int(self.grid.Nr), int(self.grid._Nm_long))
+
+        self.addgroup("timestep",description="timesteps accounting for different processes")
+        self.timestep.addfield(
+                "Sigma", np.zeros(shape2), description="timestep due to changes in Sigma")
+        self.timestep.addfield(
+                "smax_coag", np.zeros(shape1), description="timestep due to growth of smax")
+        self.timestep.addfield(
+                "smax_shrink", np.zeros(shape1), description="timestep due to shikage of smax")
+
     def _makeradialgrid(self):
         '''Function sets the mass grid using the parameters set in ``Simulation.ini``.'''
         if self.grid.ri is None:
@@ -194,6 +210,8 @@ class Simulation(dp.Simulation):
         self._initializegrid()
         self._initializegas()
         self._initializedust()
+        if(std.dust.DEBUG):
+            self._timestep_accounting()
 
         # Set integrator
         if self.integrator is None:
@@ -256,7 +274,7 @@ class Simulation(dp.Simulation):
             self.dust.addfield(
                 "D", np.zeros(shape2), description="Diffusivity [cm²/s]"
             )
-            self.dust.D.updater = dp.std.dust.D
+            self.dust.D.updater = std.dust.D_mod
         # Deltas
         if self.dust.delta.rad is None:
             delta = self.ini.gas.alpha * np.ones(shape1)
@@ -404,10 +422,10 @@ class Simulation(dp.Simulation):
             self.dust.v.addfield(
                 "rad", np.zeros(shape2), description="Radial velocity [cm/s]"
             )
-            self.dust.v.rad.updater = dp.std.dust.vrad
+            self.dust.v.rad.updater = std.dust.vrad_mod
         # Distribution exponents
         if self.dust.q.eff is None:
-            q = np.ones(shape1)  # will be computed in the updater
+            q = np.ones(shape1)*-3.5  # will be computed in the updater
             self.dust.q.addfield(
                 "eff", q, description="Calculated distribution exponent"
             )
@@ -419,11 +437,11 @@ class Simulation(dp.Simulation):
             self.dust.q.frag.updater = std.dust.q_frag
         if self.dust.q.turb1 is None:
             self.dust.q.addfield(
-                "turb1", -3.75, description="Size distribution exponent in first turbulence regime"
+                "turb1", -3.5, description="Size distribution exponent in first turbulence regime"
             )
         if self.dust.q.turb2 is None:
             self.dust.q.addfield(
-                "turb2", -3.5, description="Size distribution exponent in second turbulence regime"
+                "turb2", -3.75, description="Size distribution exponent in second turbulence regime"
             )
         if self.dust.q.drfrag is None:
             self.dust.q.addfield(
@@ -469,6 +487,8 @@ class Simulation(dp.Simulation):
             self.dust.s.addfield(
                 "max", smax, description="Maximum particle size"
             )
+            self.dust.s.addfield(
+                "_maxOld", smax, description="Maximum particle size")
         self.dust.s.max.differentiator = std.dust.smax_deriv
 
         if self.dust.s.lim is None:
@@ -512,10 +532,11 @@ class Simulation(dp.Simulation):
             self, np.zeros(shape1),
             description="coagulation source term for amax [cm/s]"
         )
-        self.dust.s._sdot_shrink = Field(
+        self.dust.s.sdot_shrink = Field(
             self, np.zeros(shape1),
-            description="shrinkage source term for amax [cm²/s]"
+            description="shrinkage source term for amax [cm²/s]",
         )
+        self.dust.S.ext.updater = std.dust.S_shrink
         # State vector
         self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
                            description="Dust state vector (Sig1, Sig2, a_max * Sig1)")
@@ -538,5 +559,22 @@ class Simulation(dp.Simulation):
                 self.grid.ri[::-1],
                 self.dust.Sigma[::-1],
                 condition="val",
-                value=0.1 * self.dust.SigmaFloor[-1]
+                value=0.1 * self.dust.SigmaFloor[-1,1]
+            )
+
+        # Boundary conditions of smax 
+        if self.dust.s.boundary.inner is None:
+            self.dust.s.boundary.inner = dp.utils.Boundary(
+                self.grid.r,
+                self.grid.ri,
+                self.dust.Sigma[...,1]*self.dust.s.max,
+                condition="const_grad"
+            )
+        if self.dust.s.boundary.outer is None:
+            self.dust.s.boundary.outer = dp.utils.Boundary(
+                self.grid.r[::-1],
+                self.grid.ri[::-1],
+                self.dust.Sigma[::-1,1]*self.dust.s.max[::-1],
+                condition="val",
+                value= self.dust.SigmaFloor[-1,1]*self.dust.s.max[-1]
             )

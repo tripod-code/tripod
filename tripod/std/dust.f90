@@ -300,7 +300,7 @@ subroutine qfrag(p_dr, dv_tot, vfrag, St_max, q_turb1, q_turb2, &
     ! -------
     ! q_frag(Nr) : Fragmentation power-law
     !
-    use constants, only : sigma_H2
+    use constants, only : sigma_H2,pi
     implicit none
 
     double precision, intent(in) :: p_dr(Nr)
@@ -319,8 +319,8 @@ subroutine qfrag(p_dr, dv_tot, vfrag, St_max, q_turb1, q_turb2, &
     integer :: ir
 
     do ir = 1, Nr
-
-        Re = 0.5d0 * alpha(ir) * SigmaGas(ir) * sigma_H2 / mump(ir)
+        !This seems wrong with the paper
+        Re = 1d0/sqrt(2d0*pi) * alpha(ir) * SigmaGas(ir) * sigma_H2 / mump(ir)
 
         ! Eq. A.1 of Pfeil+2024
         f_t1t2 = 5d0 * sqrt(1.d0 / Re) / St_max(ir)
@@ -337,6 +337,54 @@ subroutine qfrag(p_dr, dv_tot, vfrag, St_max, q_turb1, q_turb2, &
     end do
 
 end subroutine qfrag
+
+subroutine pfrag_trans( St_max, alpha, SigmaGas, mump, p_frag_trans, Nr)
+    ! Subroutine calculates the power-law in the fragmentation
+    ! regime, interpolating between different cases.
+    !
+    ! Note that the relative velocities passed to this subroutine
+    ! should be the ...[:, -1, -2] entry, i.e. the relative ... velocities
+    ! between a_max and half of a_max the drift component should also
+    ! include the radial and azimuthal contributions.
+    !
+    ! Parameters
+    ! ----------
+    ! St_max : the maximum Stokes number
+    ! alpha : the turbulence parameter
+    ! SigmaGas : the gas surface density
+    ! mump : array of mean molecular mass (\mu * m_p)
+    ! Nr : Number or radial grid cells
+    !
+    ! Returns
+    ! -------
+    ! p_frag_trans(Nr) : Fragmentation power-law
+    !
+    use constants, only : sigma_H2,pi
+    implicit none
+
+    double precision, intent(in) :: St_max(Nr)
+    double precision, intent(in) :: alpha(Nr)
+    double precision, intent(in) :: SigmaGas(Nr)
+    double precision, intent(in) :: mump(Nr)
+    double precision, intent(out) :: p_frag_trans(Nr)
+    integer, intent(in) :: Nr
+
+    double precision :: Re, f_t1t2
+
+    integer :: ir
+
+    do ir = 1, Nr
+        !This seems wrong with the paper
+        Re = 1d0/sqrt(2d0*pi) * alpha(ir) * SigmaGas(ir) * sigma_H2 / mump(ir)
+
+        ! Eq. A.1 of Pfeil+2024
+        f_t1t2 = 5d0 * sqrt(1.d0 / Re) / St_max(ir)
+        
+        ! Eq. A.2
+        p_frag_trans(ir) = 0.5d0 * (1d0 - (f_t1t2**4 - 1d0) / (f_t1t2**4 + 1d0))
+    end do
+
+end subroutine pfrag_trans
 
 
 subroutine jacobian_coagulation_generator(sig, dv, H, m, Sigma, smin, smax, qeff, dat, row, col, Nr, Nm)
@@ -599,19 +647,27 @@ subroutine smax_deriv_shrink(dt, slim, f_crit, smax, Sig, sdot, nr, nm)
     double precision, intent(out) :: sdot(Nr)
 
     double precision :: t_dep(Nr)
+    double precision :: eps_crit(Nr)
+    double precision :: sdot_max(Nr)
+
     integer, intent(in) :: Nr, Nm
 
-    where (Sig(:, 2) .gt. f_crit * (Sig(:, 1) + Sig(:, 2)) .or. smax .lt. slim)
+    eps_crit = f_crit * (Sig(:, 1) + Sig(:, 2))
+    where (Sig(:, 2) .gt. f_crit * (Sig(:, 1) + Sig(:, 2)) .or. smax .le. slim)
         sdot = 0d0
     elsewhere
-        t_dep = dt * Sig(:, 2) / (f_crit * (Sig(:, 1) + Sig(:, 2)) - Sig(:, 2))
+        t_dep = abs(Sig(:, 2)/(-(eps_crit - Sig(:,2))/dt))
+        
         !the factor of 1+t_dep is differnt that in the paper
         sdot = smax / (t_dep + 1d0) * (1d0 - smax / slim)
+        !limitng factor to be changed
+        sdot_max = 0.4*smax/dt 
+        sdot =  sdot *sdot_max/sqrt(sdot**2 + sdot_max**2)
     end where
 
 end subroutine smax_deriv_shrink
 
-subroutine Sig_deriv_shrink(Sig, amin, amax, xi, adot_shrink, Sigdot_shrink, Nr, Nm)
+subroutine Sig_deriv_shrink(Sig, amin, amax, adot_shrink, Sigdot_shrink, Nr, Nm)
     ! Subroutine calculates the derivative of the dust surface density
     ! caused by the shrinkage of the maximum particle size.
     !
@@ -634,17 +690,19 @@ subroutine Sig_deriv_shrink(Sig, amin, amax, xi, adot_shrink, Sigdot_shrink, Nr,
     double precision, intent(in) :: Sig(Nr, Nm)
     double precision, intent(in) :: amin(Nr)
     double precision, intent(in) :: amax(Nr)
-    double precision, intent(in) :: xi(Nr)
     double precision, intent(in) :: adot_shrink(Nr)
     double precision, intent(out) :: Sigdot_shrink(Nr,Nm)
 
     integer, intent(in) :: Nr, Nm
     double precision :: dum1(Nr)
     double precision :: dum2(Nr)
+    double precision :: aint(Nr)
+    double precision :: xi(Nr)
     double precision :: sig_tot(Nr)
 
+    aint(:) = SQRT(amin(:) * amax(:))
+    xi = log(Sig(:,2)/Sig(:,1))/log(amax/aint)
     dum1 = (amax * amin)**(0.5*xi)
-
     sig_tot = Sig(:, 1) + Sig(:, 2)
 
     where (xi .eq. 0d0)
@@ -653,9 +711,6 @@ subroutine Sig_deriv_shrink(Sig, amin, amax, xi, adot_shrink, Sigdot_shrink, Nr,
         dum2 = sig_tot * xi * (0.5d0 * amin**xi * dum1 + amax**xi * (0.5d0 * (dum1 - amin**xi))) / (amax * (amax**xi - amin**xi)**2)
     end where
 
-    where (dum2 .lt. 0d0)
-        dum2 = 0d0
-    end where
 
     where (dum2 .ne. dum2)
         dum2 = 0d0
@@ -723,13 +778,13 @@ subroutine jacobian_shrink_generator(Sigma, smin, smax,amax_dot, dat, row, col, 
     row(:) = 0
     col(:) = 0
 
-    
+ 
     sint(:) = SQRT(smin(:) * smax(:))
     xi = log(Sigma(:,2)/Sigma(:,1))/log(smax/sint)
-
+    dum1 = (smax * smin)**(0.5*xi)
     ! here collisions between large and small dust use a0 and a1
     ! which corresponds to a(1, 3) in the full size array (with helper sizes).
-    where(xi .eq. 0d0)
+    where(xi .eq. 0d0 .or. Sigma(:, 2) .gt. 0.425d0 * (Sigma(:, 1) + Sigma(:, 2)))
         dum2 = 0.0d0
     elsewhere
         dum2 =  xi * (0.5d0 * smin**xi * dum1 + smax**xi * (0.5d0 * (dum1 - smin**xi))) / (smax * (smax**xi - smin**xi)**2)
@@ -739,10 +794,14 @@ subroutine jacobian_shrink_generator(Sigma, smin, smax,amax_dot, dat, row, col, 
         dum2 = 0.0d0
     end where
 
+    where (dum2 .lt. 0d0)
+        dum2 = 0d0
+    end where
+
     dum2 = dum2 * amax_dot
     !check if the signs are correct
-    jac(:, 1, 1) = dum2
-    jac(:, 2, 1) = -dum2
+    jac(:, 1, 1) = -dum2
+    jac(:, 2, 1) = dum2
     jac(:, 1, 2) = -dum2
     jac(:, 2, 2) = dum2
 
