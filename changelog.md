@@ -3,6 +3,10 @@
 - fixed the eternal source term of the shrinkage -> not fully cosnistent yet 
     -same as in Pluto on the timestep but limitng the maximal deviation
 - changed the power law to be cosistent wit hthe tripod code sent to me -> different than in the paper 
+- changed the relative velocity terms for the browninan motion (only considders the larger size), radial drift (uses vmax *.. instead of vdrift of the code) and vertical settleing (st/1+st**2 instead of cutoff) to be consistent with PLuto 
+
+- changed the implementation of Re to use the same definiton as in Pluto -> use rhoGas
+
 
 
 

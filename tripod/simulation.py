@@ -54,6 +54,7 @@ class Simulation(dp.Simulation):
         self.dust.f.dv = None
         self.dust.f.updater = ["dv"]
         self.dust.p.drift = None
+        self.dust.v.rad_flux = None
         self.dust.p.updater = ["frag", "stick", "drift"]
 
         # Adjusting update orders
@@ -387,7 +388,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "azi", np.zeros(shape3), description="Relative azimuthal velocity [cm/s]"
             )
-            self.dust.v.rel.azi.updater = dp.std.dust.vrel_azimuthal_drift
+            self.dust.v.rel.azi.updater = std.dust.vrel_azimuthal_drift
         if self.dust.v.rel.brown is None:
             self.dust.v.rel.addfield(
                 "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]"
@@ -397,17 +398,17 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "rad", np.zeros(shape3), description="Relative radial velocity [cm/s]"
             )
-            self.dust.v.rel.rad.updater = dp.std.dust.vrel_radial_drift
+            self.dust.v.rel.rad.updater = std.dust.vrel_radial_drift
         if self.dust.v.rel.turb is None:
             self.dust.v.rel.addfield(
                 "turb", np.zeros(shape3), description="Relative turbulent velocity [cm/s]"
             )
-            self.dust.v.rel.turb.updater = dp.std.dust.vrel_turbulent_motion
+            self.dust.v.rel.turb.updater = std.dust.vrel_turbulent_motion
         if self.dust.v.rel.vert is None:
             self.dust.v.rel.addfield(
                 "vert", np.zeros(shape3), description="Relative vertical settling velocity [cm/s]"
             )
-            self.dust.v.rel.vert.updater = dp.std.dust.vrel_vertical_settling
+            self.dust.v.rel.vert.updater = std.dust.vrel_vertical_settling
         if self.dust.v.rel.tot is None:
             self.dust.v.rel.addfield(
                 "tot", np.zeros(shape3), description="Total relative velocity [cm/s]"
@@ -422,7 +423,13 @@ class Simulation(dp.Simulation):
             self.dust.v.addfield(
                 "rad", np.zeros(shape2), description="Radial velocity [cm/s]"
             )
-            self.dust.v.rad.updater = std.dust.vrad_mod
+            self.dust.v.rad.updater = dp.std.dust.vrad
+        if self.dust.v.rad_flux is None:
+            self.dust.v.addfield(
+                "rad_flux", np.zeros(shape2), description="Radial velocity modified to claulate the proper flux[cm/s]"
+            )
+            self.dust.v.rad_flux.updater = std.dust.vrad_mod
+
         # Distribution exponents
         if self.dust.q.eff is None:
             q = np.ones(shape1)*-3.5  # will be computed in the updater

@@ -110,6 +110,7 @@ def prepare(sim):
     s_max_deriv = sim.dust.s.max.derivative()
     sim.dust.S.ext.update()
     sim.dust.S.coag.update()
+    sim.dust.S.hyd.update()
     sim.dust.S.coag[0] = 0.
     sim.dust.S.coag[-1] = 0.
     sim.dust.S.ext[0] = 0.
@@ -312,13 +313,14 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
         )
 
     # Getting data vector and coordinates for the hydrodynamic sparse matrix
+    sim.dust.v.rad_flux.update()
     A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
         area,
         sim.dust.D[:, [0, 2]],
         r,
         ri,
         sim.gas.Sigma,
-        sim.dust.v.rad[:, [0, 2]]
+        sim.dust.v.rad_flux[:, [0, 2]]
     )
     row_hyd = np.hstack(
         (np.arange(Ntot - Nm_s) + Nm_s, np.arange(Ntot), np.arange(Ntot - Nm_s)))
@@ -430,6 +432,10 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
     col = np.hstack((col_coag, col_hyd, col_in, col_out))
     dat = np.hstack((dat_coag, dat_hyd, dat_in, dat_out))
 
+    row = np.hstack((row_hyd, row_in, row_out))
+    col = np.hstack((col_hyd, col_in, col_out))
+    dat = np.hstack((dat_hyd, dat_in, dat_out))
+
     gen = (dat, (row, col))
     # Building sparse matrix of coagulation Jacobian
     J = sp.csc_matrix(
@@ -475,7 +481,7 @@ def F_adv(sim, Sigma=None):
         Advective mass fluxes through the grid cell interfaces"""
     if Sigma is None:
         Sigma = sim.dust.Sigma
-    return dp_dust_f.fi_adv(Sigma, sim.dust.v.rad[:, [0, 2]], sim.grid.r, sim.grid.ri)
+    return dp_dust_f.fi_adv(Sigma, sim.dust.v.rad_flux[:, [0, 2]], sim.grid.r, sim.grid.ri)
 
 
 
@@ -487,7 +493,7 @@ def F_diff(sim, Sigma=None):
     Fi = dust_f.fi_diff(sim.dust.D[:, [0, 2]],
                         Sigma,
                         sim.gas.Sigma,
-                        sim.dust.St[:, [0, 2]],
+                        sim.dust.St[:, [0, 2]]*sim.dust.f.drift,
                         np.sqrt(sim.dust.delta.rad * sim.gas.cs ** 2),
                         sim.grid.r,
                         sim.grid.ri)
@@ -649,7 +655,7 @@ def smax_deriv(sim, t, smax):
     # the rate of shrinkage.
     dt = np.diff(sim.grid.ri) / (1e-100 + np.abs(sim.dust.v.rad[:, 2]))
     dt = sim.t.stepsize* np.ones_like(sim.grid.r)
-    dt = np.maximum(dt,10*c.year)
+    #dt = np.maximum(dt,10*c.year)
 
 
     ds_shrink = dust_f.smax_deriv_shrink(
@@ -766,7 +772,77 @@ def vrel_brownian_motion(sim):
     -------
     vrel : Field
         Relative velocities"""
-    return dust_f.vrel_brownian_motion(sim.gas.cs, sim.dust.m, sim.gas.T)
+    return dust_f.vrel_brownian_motion(sim.gas.cs, sim.dust.m, sim.gas.T,sim.gas.mu)
+
+def vrel_radial_drift(sim):
+    """Function calculates the relative particle velocities due to Brownian motion.
+    The maximum value is set to the sound speed.
+    Different from dustpy to be cosistent with pluto version
+    Only cosidders the bigger of the two sizes provided
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    vrel : Field
+        Relative velocities"""
+    return dust_f.vrel_radial_drift(sim.dust.v.driftmax/sim.gas.gamma,sim.dust.St/sim.gas.gamma[:,np.newaxis]**0.5)
+
+def vrel_azimuthal_drift(sim):
+    """Function calculates the relative particle velocities due to azimuthal drift.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    vrel : Field
+        Relative velocities"""
+    return dp_dust_f.vrel_azimuthal_drift(sim.dust.v.driftmax/sim.gas.gamma, sim.dust.St/sim.gas.gamma[:,np.newaxis]**0.5)
+
+
+
+def vrel_vertical_settling(sim):
+    """Function calculates the relative particle velocities due to vertical settling.
+        Different from dustpy to be cosistent with pluto version
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    vrel : Field
+        Relative velocities"""
+    return dust_f.vrel_vertical_settling(sim.dust.H, sim.grid.OmegaK, sim.dust.St/sim.gas.gamma[:,np.newaxis]**0.5)
+
+def vrel_turbulent_motion(sim):
+    """Function calculates the relative particle velocities due to turbulent motion.
+    It uses the prescription of Ormel & Cuzzi (2007).
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    vrel : Field
+        Relative velocities"""
+    return dust_f.vrel_ormel_cuzzi_2007(
+        sim.dust.delta.turb,
+        sim.gas.cs,
+        sim.gas.mu,
+        sim.grid.OmegaK,
+        sim.gas.rho,
+        sim.dust.St/sim.gas.gamma[:,np.newaxis]**0.5)
+
+
 
 
 def q_eff(sim):
@@ -803,7 +879,9 @@ def q_frag(sim):
         sim.dust.q.turb2,
         sim.dust.q.drfrag,
         sim.gas.alpha,
-        sim.gas.Sigma,
+        sim.gas.rho,
+        sim.gas.cs,
+        sim.grid.OmegaK,
         sim.gas.mu)
 
 def p_frag_trans(sim):
@@ -819,7 +897,9 @@ def p_frag_trans(sim):
 
     return dust_f.pfrag_trans(sim.dust.St[:, -1],
         sim.gas.alpha,
-        sim.gas.Sigma,
+        sim.gas.rho,
+        sim.gas.cs,
+        sim.grid.OmegaK,
         sim.gas.mu)
 
 
@@ -845,9 +925,15 @@ def p_drift(sim):
     psmall = 1. - pint
     vtr_simp = psmall*vsmall + pint*vinter
 
-    f_dt = 0.3 * vtr_simp/(dv_drmax+1e-10)
+    f_dt = 0.3 * vtr_simp/(dv_drmax)
+    f_dt[dv_drmax == 0] = 1e100
+
     # Eq. A.4
-    return 0.5 * (1.0 - (f_dt**6 - 1.0) / (f_dt**6 + 1.0))
+    pdr = 0.5 +  0.5 * ((1.0 - f_dt**6) / (f_dt**6 + 1.0))
+    pdr[f_dt  > 100] = 0
+    pdr[f_dt  < 0.001] = 1
+
+    return pdr
 
 def D_mod(sim):
     """Function calculates the dust diffusivity.
@@ -912,13 +998,14 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
 
     # TODO: double check if diffusion works as intended for amax.
     # Creating the sparse matrix
+    sim.dust.v.rad_flux.update()
     A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
         area,
-        sim.dust.D[:, 1],
+        sim.dust.D[:, 2],
         r,
         ri,
         sim.gas.Sigma,
-        sim.dust.v.rad[:, 2]
+        sim.dust.v.rad_flux[:, 2]
     )
     # Setting boundary conditions for the Jacobian of smax*Sigma
     # The boundary condition is constant value on both boundaries
@@ -1049,17 +1136,18 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
 
     S_Sigma_ext = np.zeros_like(dust.Sigma)
     S_Sigma_ext[1:-1, ...] += dust.S.ext[1:-1, ...]
-    S_Sigma_ext_ipl = dust.S.coag
+    S_Sigma_ext[1:-1, ...] += dust.S.coag[1:-1,...]
+    
 
     # smax*Sigma (product rule)
     S_smax_expl = np.zeros_like(dust.s.max)
     S_smax_expl[1:-1] = s_max_deriv[1:-1] * dust.Sigma[1:-1, 1] \
-        + S_Sigma_ext[1:-1, 1] * dust.s.max[1:-1] +  S_Sigma_ext_ipl[1:-1, 1] * dust.s.max[1:-1]
-
+        + S_Sigma_ext[1:-1, 1] * dust.s.max[1:-1]
     # Stitching both parts together
     S = np.hstack((S_Sigma_ext.ravel(), S_smax_expl))
 
     # Right hand side
+    rhs[...] += dx * S 
 
     N = jac.shape[0]
     eye = sp.identity(N, format="csc")
