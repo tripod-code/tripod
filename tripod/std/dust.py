@@ -76,7 +76,7 @@ def dt_smax(sim):
     # Ignoring boundaries.
     # smax_dot = sim.dust.s.max.a()[1:-1]
     # here we only take the derivative due to coagulation into account
-    smax_dot = sim.dust.s._sdot_coag[1:-1]
+    smax_dot = sim.dust.s.sdot_coag[1:-1]
     dt = sim.dust.s.max[1:-1] / (np.abs(smax_dot) + 1e-100)
 
     if(DEBUG):
