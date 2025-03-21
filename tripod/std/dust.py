@@ -26,7 +26,7 @@ def dt(sim):
     -------
     dt : float
         Dust time step"""
-    dtSigma = dp_dust.dt(sim) or 1e100
+    dtSigma = dt_Sigma(sim) or 1e100
     dtsmax = dt_smax(sim)
     return np.minimum(dtSigma, dtsmax)
 
@@ -51,11 +51,61 @@ def dt_Sigma(sim):
             sim.dust.S.tot < 0.)
         mask[0, :] = False
         mask[-1:, :] = False
-        dt = sim.dust.Sigma[mask] / sim.dust.S.tot[mask]
-        if(DEBUG):
-            sim.timestep.Sigma = dt
-        return np.min(np.abs(dt))
-    return 1.e100
+
+        mask2 = sim.dust.S.tot[:, 1] < 0.
+        f = sim.dust.Sigma[:,1]/sim.dust.Sigma.sum(-1)
+        mask2 = np.logical_and(mask2, f<0.43)
+        dsig_da = dsigda(sim)
+        dt_pred = 10 * ((-0.1*  sim.dust.s.max[mask2] * dsig_da[mask2]) + sim.dust.Sigma[mask2,1] - sim.dust.f.crit* sim.dust.Sigma[mask2,:].sum(-1)) \
+                /(sim.dust.S.tot[mask2, 1] *(sim.dust.f.crit - 1.) + sim.dust.f.crit * sim.dust.S.tot[mask2, 0])
+        dt_pred = np.where(dt_pred != dt_pred, 0, dt_pred)  
+        dt_pred = np.abs(dt_pred)
+        dt_pred = np.where(dt_pred == np.inf, 0, dt_pred)
+
+        dt = np.ones_like(sim.dust.Sigma)*1e100
+        dt[mask] = np.abs(sim.dust.Sigma[mask] / sim.dust.S.tot[mask])
+        a = np.asarray(dt_pred/dt[mask2,1])
+
+        """ with open("output.txt", "a") as f:
+            dt_new = np.maximum(dt[mask2,1],dt_pred)
+            if (len(dt_new) == 0):
+                dt_new = np.array([0])
+            f.write(f"t {sim.t/c.year} {dt.min()/c.year} {dt_new.min()/c.year}\n")
+
+        del_a = 1./dsigda(sim)[mask2]*  (sim.dust.f.crit * sim.dust.Sigma[mask2, :].sum(-1) + dt_pred/10. * sim.dust.f.crit * sim.dust.S.tot[mask2, :].sum(-1) - sim.dust.Sigma[mask2, 1] - dt_pred/10. *  sim.dust.S.tot[mask2, 1])
+        f_pred = (sim.dust.Sigma[mask2,1] + dt_pred/10. * sim.dust.S.tot[mask2,1])/(sim.dust.Sigma[mask2,:].sum(-1) + dt_pred/10. * sim.dust.S.tot[mask2,:].sum(-1))
+        del_a_old =  1./dsigda(sim)[mask2]*  (sim.dust.f.crit * sim.dust.Sigma[mask2, :].sum(-1) + dt[mask2,1]/10. * sim.dust.f.crit * sim.dust.S.tot[mask2, :].sum(-1) - sim.dust.Sigma[mask2, 1] - dt[mask2,1]/10. *  sim.dust.S.tot[mask2, 1])
+        f_pred_old = (sim.dust.Sigma[mask2,1] + dt[mask2,1]/10. * sim.dust.S.tot[mask2,1])/(sim.dust.Sigma[mask2,:].sum(-1) + dt[mask2,1]/10. * sim.dust.S.tot[mask2,:].sum(-1))
+        with open("output.txt", "a") as f:
+            for val1,val2,f_n,f_old ,val3 in zip(del_a/sim.dust.s.max[mask2],del_a_old/sim.dust.s.max[mask2], f_pred,f_pred_old,sim.grid.r[mask2]/c.au):
+                f.write(f"del_an : {val1},del_a_old: {val2}, {f_n}, {f_old}  distance: {val3}\n")
+        """
+        dt[mask2,1] = np.maximum(dt[mask2,1]*2.,dt_pred)
+        return dt.min()
+    return 1e100
+
+
+def S_smax_hyd(sim):
+    """Function calculates the hydrodynamic source terms for s.max 
+    -> assumes that I can callculate the hydrodynamic source term for the product and divide it by Sig1
+    """
+
+    Fi = Fi_sig1smax(sim)
+    S_hyd = dp_dust_f.s_hyd(Fi,sim.grid.ri)/sim.dust.Sigma[:,1]
+
+    return S_hyd
+
+def Fi_sig1smax (sim):
+    """
+    Function that calculates the total flux of the Sigma[1] and s.max 
+    used to solved the advection equation for s.max
+
+    """
+    Fi_diff = F_diff(sim,Sigma = sim.dust.Sigma*sim.dust.s.max[:,np.newaxis])
+    Fi_adv = F_adv(sim,Sigma = sim.dust.Sigma*sim.dust.s.max[:,np.newaxis])
+    Fi_tot = (Fi_diff + Fi_adv)[:,1]
+    return Fi_tot
+
 
 
 def dt_smax(sim):
@@ -76,13 +126,13 @@ def dt_smax(sim):
     # Ignoring boundaries.
     # smax_dot = sim.dust.s.max.a()[1:-1]
     # here we only take the derivative due to coagulation into account
-    smax_dot = sim.dust.s.sdot_coag[1:-1]
-    dt = sim.dust.s.max[1:-1] / (np.abs(smax_dot) + 1e-100)
 
-    if(DEBUG):
-        sim.timestep.smax_coag[1:-1] = dt
-        dt2 = sim.dust.s.max[1:-1] / (np.abs(sim.dust.s.sdot_shrink[1:-1]) + 1e-100)
-        sim.timestep.smax_shrink[1:-1] = dt2
+    dsmaxda = (sim.dust.s.max[2:]-sim.dust.s.max[:-2])/(sim.grid.r[2:]-sim.grid.r[:-2])
+
+    smax_dot_hyd = -(sim.dust.Fi.tot[1:-2, 1]+sim.dust.Fi.tot[2:-1, 1])/2. / sim.dust.Sigma[1:-1, 1] * dsmaxda*0
+
+    smax_dot = np.minimum(np.abs(sim.dust.s.sdot_coag[1:-1]),np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd))
+    dt = sim.dust.s.max[1:-1] / (smax_dot + 1e-100)
     return dt.min()
 
 
@@ -108,11 +158,11 @@ def prepare(sim):
     sim.dust._SigmaOld[...] = sim.dust.Sigma[...]
     sim.dust.s._maxOld = sim.dust.s.max
     s_max_deriv = sim.dust.s.max.derivative()
+    sim.dust.S.shrink = S_shrink(sim)
     enforce_f(sim)
     sim.dust.S.ext.update()
     sim.dust.S.coag.update()
     sim.dust.S.hyd.update()
-    sim.dust.S.shrink = S_shrink(sim)
     sim.dust.S.coag[0] = 0.
     sim.dust.S.coag[-1] = 0.
     sim.dust.S.ext[0] = 0.
@@ -297,7 +347,6 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
     )
         
     # Getting data vector and coordinates for the hydrodynamic sparse matrix
-    sim.dust.v.rad_flux.update()
     A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
         area,
         sim.dust.D[:, [0, 2]],
@@ -631,30 +680,11 @@ def smax_deriv(sim, t, smax):
         sim.dust.Sigma,
         sim.dust.SigmaFloor)
 
-    # TODO: here we compute a depletion time scale which sets
-    # the rate of shrinkage.
-    dt_dr = np.diff(sim.grid.ri) / (1e-100 + np.abs(sim.dust.v.rad[:, -1]))
-    dt = np.maximum(sim.t.stepsize* np.ones_like(sim.grid.r),dt_dr)
-    dt = 2e3*c.year* np.ones_like(sim.grid.r)
-    #dt = np.maximum(sim.t.stepsize * np.ones_like(sim.grid.r),2e3*c.year)
-    #dt = np.maximum(dt,10*c.year)
 
-    """
-    ds_shrink = dust_f.smax_deriv_shrink(
-        dt,
-        sim.dust.s.lim,
-        sim.dust.f.crit,
-        smax,
-        sim.dust.Sigma
-    )"""
-
-    #ds_shrink = dust_f.smax_deriv_shrink_2(sim.t.stepsize, sim.dust.s.lim, sim.dust.qrec, sim.dust.f.crit, sim.dust.s.max, sim.dust.s.min, sim.dust.Sigma)
-    ds_shrink = np.zeros_like(sim.dust.s.max)
-
-    sim.dust.s.sdot_shrink = ds_shrink
+    sim.dust.s.sdot_shrink = np.zeros_like(sim.dust.s.max)
     sim.dust.s.sdot_coag = ds_coag
 
-    return ds_coag + ds_shrink
+    return ds_coag
 
 
 def S_coag(sim, Sigma=None):
@@ -685,11 +715,12 @@ def S_coag(sim, Sigma=None):
         Sigma,
         sim.dust.s.min,
         sim.dust.s.max,
-        sim.dust.q.eff
+        sim.dust.q.eff,
+        sim.dust.SigmaFloor
     )
 
     # Prevents unwanted growth of smax
-    return s_coag * np.where(sim.dust.Sigma.sum(-1) > sim.dust.SigmaFloor.sum(-1), 1., 0.)[:, None]
+    return s_coag
 
 # TODO: check if this is still needed after the dustpy update
 
@@ -705,6 +736,9 @@ def enforce_f(sim):
 
 def dadsig(sim):
     return dust_f.dadsig(sim.dust.s.lim, sim.dust.qrec,sim.dust.f.crit,  sim.dust.s.max, sim.dust.s.min, sim.dust.Sigma)
+
+def dsigda(sim):
+    return dust_f.dsigda(sim.dust.s.lim, sim.dust.qrec,sim.dust.f.crit,  sim.dust.s.max, sim.dust.s.min, sim.dust.Sigma)
 
 
 def S_tot(sim, Sigma=None):
@@ -851,7 +885,7 @@ def q_frag(sim):
     float: The effective fragmentation power-law of the size distribution.
     """
     return dust_f.qfrag(
-        sim.dust.p.drift,
+        sim.dust.p.driftfrag,
         sim.dust.v.rel.tot[:, -1, -2],
         sim.dust.v.frag,
         sim.dust.St[:, -1],
@@ -901,7 +935,7 @@ def p_frag_trans(sim):
         sim.gas.mu)
 
 
-def p_drift(sim):
+def p_drift_frag(sim):
     """Calculate the fudge factor for the relative velocities.
 
     Parameters
@@ -909,7 +943,7 @@ def p_drift(sim):
     sim : simulation frame
     """
 
-    # Pfeil+2024, Eq. A.3
+    """  # Pfeil+2024, Eq. A.3
     dv_drmax = np.sqrt(
         sim.dust.v.rel.rad[:, -1, -2]**2 + sim.dust.v.rel.azi[:, -1, -2]**2)
     # where does the 0.3 come from
@@ -926,9 +960,9 @@ def p_drift(sim):
     f_dt = np.where(dv_drmax != 0, 0.3 * vtr_simp / dv_drmax, 1e100)
 
     # Eq. A.4
-    pdr = np.where( f_dt < 1e100, 0.5 + 0.5 * ((1.0 - f_dt**6) / (f_dt**6 + 1.0)),0.0)
-    
-    return pdr
+    pdr = np.where( f_dt < 1e100, 0.5 + 0.5 * ((1.0 - f_dt**6) / (f_dt**6 + 1.0)),0.0)"""
+
+    return dust_f.pdriftfrag(sim.dust.v.rel.rad[:,-1,-2],sim.dust.v.rel.azi[:,-1,-2],sim.dust.St[:,-1],sim.gas.alpha,sim.gas.Sigma,sim.gas.mu,sim.gas.cs,sim.dust.p.fragtrans)
 
 def D_mod(sim):
     """Function calculates the dust diffusivity.
@@ -949,7 +983,7 @@ def D_mod(sim):
     grid cells will be set to zero to avoid unwanted
     behavior at the boundaries."""
     # warning this is only done beacuse opf the pluto code -> times gammma factor athe the end
-    v2 = sim.dust.delta.rad * sim.gas.cs**2
+    v2 = sim.dust.delta.rad * sim.gas.cs**2*1.43
     Diff = dp_dust_f.d(v2, sim.grid.OmegaK, sim.dust.St*sim.dust.f.drift)
     Diff[:2, ...] = 0.
     Diff[-2:, ...] = 0.
@@ -1011,6 +1045,26 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
     dat_max_adv = np.hstack((A.ravel()[1:], B.ravel(), C.ravel()[:-1]))
 
 
+
+    dat_coag, row_coag, col_coag = dust_f.jacobian_coagulation_generator(
+        # here we compute the cross section where the first entry is
+        # the cross section of (a0, a1) and the second of (a1, fudge * a1)
+        np.pi * (sim.dust.a[:, [0, 2]]+sim.dust.a[:, [2, 1]])**2,
+        # same for the relative velocities
+        sim.dust.v.rel.tot[:, [0, 2], [2, 1]],
+        sim.dust.H[:, [0, 2]],
+        sim.dust.m[:, [0, 2]],
+        sim.dust.Sigma,
+        sim.dust.s.min,
+        sim.dust.s.max,
+        sim.dust.q.eff)
+    mask = col_coag %2 == 1
+    col_coag = col_coag[mask]
+    row_coag = row_coag[mask]
+    dat_coag = dat_coag[mask]
+    row_coag =(row_coag-1)/Nm_s
+    col_coag = (col_coag-1)/Nm_s
+
     dat_in = np.zeros(3)
     row_in = np.zeros(3)
     col_in = np.arange(3)
@@ -1062,9 +1116,9 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
         # to do pow and const_pow
 
     # Stitching together the generators
-    row = np.hstack((row_max_adv, row_in, row_out))
-    col = np.hstack((col_max_adv, col_in, col_out))
-    dat = np.hstack((dat_max_adv, dat_in, dat_out))
+    row = np.hstack((row_max_adv,row_coag, row_in, row_out))
+    col = np.hstack((col_max_adv,col_coag, col_in, col_out))
+    dat = np.hstack((dat_max_adv, dat_coag, dat_in, dat_out))
 
     gen = (dat, (row, col))
     # Building sparse matrix of coagulation Jacobian
@@ -1126,9 +1180,6 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     # Note: s.max.derivative also sets s.sdot_shrink which is used below
     s_max_deriv = dust.s.max.derivative()
 
-    # Sigma
-    aint = np.sqrt(dust.s.min * dust.s.max)
-
 
     S_Sigma_ext = np.zeros_like(dust.Sigma)
     S_Sigma_ext[1:-1, ...] += dust.S.ext[1:-1, ...]
@@ -1137,7 +1188,7 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     # smax*Sigma (product rule)
     S_smax_expl = np.zeros_like(dust.s.max)
     S_smax_expl[1:-1] = s_max_deriv[1:-1] * dust.Sigma[1:-1, 1] \
-        + (dust.S.ext[1:-1,1] + dust.S.coag[1:-1,1]) * dust.s.max[1:-1] 
+        + (dust.S.ext[1:-1,1]) * dust.s.max[1:-1] 
     # Stitching both parts together
     S = np.hstack((S_Sigma_ext.ravel(), S_smax_expl))
 

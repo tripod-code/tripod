@@ -475,6 +475,62 @@ subroutine pfrag_trans( St_max, alpha, SigmaGas, mump, p_frag_trans, Nr)
 
 end subroutine pfrag_trans
 
+subroutine pdriftfrag(dv_rad,dv_az, St_max, alpha, SigmaGas, mump, cs,p_frag_trans,p_driftfrag, Nr)
+    ! Subroutine calculates the tranistion form the fragmentation to the drif tfragmentation limit
+    !
+    ! Parameters
+    ! ----------
+    ! dv_rad(Nr) : Radial relative velocities
+    ! dv_az(Nr) : Azimuthal relative velocities
+    ! St_max(Nr) : the maximum Stokes number
+    ! alpha(Nr) : the turbulence parameter
+    ! SigmaGas(Nr) : the gas surface density
+    ! mump(Nr) : array of mean molecular mass (\mu * m_p)
+    ! cs(Nr) : sound speed
+    ! Nr : Number or radial grid cells
+    ! Returns
+    ! -------
+    ! p_frag_trans(Nr) : transition probability framgnetation to drift fragmentation
+
+    use constants, only : Sigma_H2
+    implicit none
+
+    double precision, intent(in) :: dv_rad(Nr)
+    double precision, intent(in) :: dv_az(Nr)
+    double precision, intent(in) :: St_max(Nr)
+    double precision, intent(in) :: alpha(Nr)
+    double precision, intent(in) :: SigmaGas(Nr)
+    double precision, intent(in) :: mump(Nr)
+    double precision, intent(in) :: cs(Nr)
+    double precision, intent(in) :: p_frag_trans(Nr)
+    double precision, intent(out) :: p_driftfrag(Nr)
+    integer, intent(in) :: Nr
+
+
+    !local variables
+    double precision :: dv_drmax
+    double precision :: St_mx, St_mn
+    double precision :: Re
+    double precision :: vgas, vsmall, vinter, v_tr_s, f_dt
+    integer :: ir 
+
+
+    do ir = 1 , Nr
+        dv_drmax = (dv_rad(ir)**2 + dv_az(ir)**2)**0.5d0
+        st_mx = St_max(ir)
+        St_mn = 0.5d0 * St_max(ir)
+        Re = 0.5d0 * alpha(ir) * SigmaGas(ir) * sigma_H2 / mump(ir)
+        vgas = sqrt(1.5d0*alpha(ir)) *cs(ir)
+        vsmall   = vgas * ((st_mx-st_mn)/(st_mx+st_mn) * (st_mx**2./(st_mx+Re**(-0.5d0)) - st_mn**2./(st_mn+Re**(-0.5d0))))**0.5d0
+        vinter   = vgas * (2.292d0*st_mx)**0.5d0
+        v_tr_s = p_frag_trans(ir)*vinter + (1.-p_frag_trans(ir))*vsmall
+
+        f_dt = 0.3d0*v_tr_s/dv_drmax
+        p_driftfrag(ir) =  0.5d0 + 0.5d0 * ((1.0d0 - f_dt**6) / (f_dt**6 + 1.0d0))
+    enddo 
+
+end subroutine pdriftfrag
+
 
 subroutine jacobian_coagulation_generator(sig, dv, H, m, Sigma, smin, smax, qeff, dat, row, col, Nr, Nm)
     ! Subroutine calculates the coagulation Jacobian at every radial grid cell except for the boundaries.
@@ -574,7 +630,7 @@ subroutine jacobian_coagulation_generator(sig, dv, H, m, Sigma, smin, smax, qeff
 
 end subroutine jacobian_coagulation_generator
 
-subroutine s_coag(sig, dv, H, m, Sigma, smin, smax, qeff, S, Nr, Nm)
+subroutine s_coag(sig, dv, H, m, Sigma, smin, smax, qeff,Sigmin, S, Nr, Nm)
     ! Subroutine calculates the coagulation source terms.
     !
     ! Parameters
@@ -587,6 +643,7 @@ subroutine s_coag(sig, dv, H, m, Sigma, smin, smax, qeff, S, Nr, Nm)
     ! smin(Nr) : Minimum particle size
     ! smax(Nr) : Maximum particle size
     ! qeff(Nr) : size distribution exponent (computed from qturb1, ...)
+    ! Sigmin(Nr, Nm) : Dust surface densities
     ! Nr : Number of radial grid cells
     ! Nm : Number of mass bins (only a0 and a1)
     !
@@ -606,6 +663,7 @@ subroutine s_coag(sig, dv, H, m, Sigma, smin, smax, qeff, S, Nr, Nm)
     double precision, intent(in) :: smin(Nr)
     double precision, intent(in) :: smax(Nr)
     double precision, intent(in) :: qeff(Nr)
+    double precision, intent(in) :: Sigmin(Nr, Nm)
     double precision, intent(out) :: S(Nr, Nm)
     integer, intent(in) :: Nr
     integer, intent(in) :: Nm
@@ -631,8 +689,13 @@ subroutine s_coag(sig, dv, H, m, Sigma, smin, smax, qeff, S, Nr, Nm)
     dot10(:) = Sigma(:, 2)**2 * sig(:, 2) * dv(:, 2) * F(:) / (2.d0 * m(:, 2) * SQRT(pi) * H(:, 2))
 
     !#TODO: here we do not include the shinkage term yet
-    S(:, 1) = dot10(:) - dot01(:)
-    S(:, 2) = -S(:, 1)
+    where(sum(Sigma, dim=2) .gt. sum(Sigmin, dim=2))
+        S(:, 1) = dot10(:) - dot01(:)
+        S(:, 2) = -S(:, 1)
+    elsewhere
+        S(:, 1) = 0.d0
+        S(:, 2) = 0.d0
+    end where
 
 end subroutine s_coag
 
@@ -693,6 +756,7 @@ subroutine smax_deriv(dv, rhod, rhos, smin, smax, vfrag, Sigma, SigmaFloor, &
 
             A = (dv(ir) / vfrag(ir)) ** 3
             B = (1.d0 - A) / (1.d0 + A)
+            B = 1.0d0 - 2.0d0 / (1.d0 + (vfrag(ir)/dv(ir))**3.d0)
             dsmax(ir) = rhod(ir) / rhos(ir) * dv(ir) * B
 
             ! limiter to stall negative growth near the lower size limit
@@ -893,6 +957,65 @@ subroutine dadsig(alim, q,  f_crit, amax,amin, Sig, dadsig1, nr, nm)
     end where
 
 end subroutine dadsig
+
+subroutine dsigda(alim, q,  f_crit, amax,amin, Sig, dsig1da, nr, nm)
+    ! Subroutine calculates the shrinkage source term.
+    !
+    ! Parameters
+    ! ----------
+    ! dt : time scale of shinakge for each radius
+    ! slim : limiting size for shrinkage
+    ! f_crit : mass fraction below which Sig1 should not drop
+    ! smax : Maximum particle size
+    ! Sig : Dust surface densities
+    ! Nr : Number of radial grid cells
+    !
+    ! Returns
+    ! -------
+    ! sdot(Nr) : Shrinkage source term
+
+    implicit none
+
+    double precision, intent(in) :: alim
+    double precision, intent(in) :: q(Nr)
+    double precision, intent(in) :: f_crit
+    double precision, intent(in) :: amax(Nr)
+    double precision, intent(in) :: amin(Nr)
+    double precision, intent(in) :: Sig(Nr, Nm)
+    double precision, intent(out) :: dsig1da(Nr)
+    integer, intent(in) :: Nr, Nm
+
+    double precision :: Sig_crit(Nr)
+    double precision :: Sig_tot(Nr)
+    double precision :: dsig1dt(Nr)
+    double precision :: sdot_max(Nr)
+    double precision :: xi(Nr)
+    double precision :: dum1(Nr)
+
+
+
+    xi = q + 4d0    
+    dum1 = (amax * amin)**(0.5*xi)
+    Sig_tot = Sig(:, 1) + Sig(:, 2)
+    Sig_crit = f_crit * (Sig(:, 1) + Sig(:, 2))
+ 
+    dsig1da = 0d0
+
+
+    where (xi .eq. 0d0 .or. amax .le. alim)
+        dsig1da = 0.0d0
+    elsewhere
+        dsig1da = (sig_tot * xi * (0.5d0 * amin**xi * dum1 + amax**xi * (0.5d0 * (dum1 - amin**xi))) &
+        / (amax * (amax**xi - amin**xi)**2))
+    end where
+
+    where (dsig1da .ne. dsig1da)
+        dsig1da = 0d0
+    end where
+
+
+end subroutine dsigda
+
 
 
 

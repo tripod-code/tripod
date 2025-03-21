@@ -141,7 +141,10 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
                     a_i[i_up]**(4 - q[ir])
 
         # normalize
-        sig_da[ir, :i_up+1] = sig_da[ir, :i_up+1] / \
-            sig_da[ir, :i_up+1].sum() * sigma_d[ir]
+        if(sig_da[ir, :i_up+1].sum() == 0. or sig_da[ir, :i_up+1].sum() != sig_da[ir, :i_up+1].sum()):
+            sig_da[ir, :i_up+1] = sigma_d[ir]/float(i_up)
+        else:
+            sig_da[ir, :i_up+1] = sig_da[ir, :i_up+1] / \
+                sig_da[ir, :i_up+1].sum() * sigma_d[ir]
 
     return a, a_i, sig_da

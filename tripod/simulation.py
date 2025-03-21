@@ -42,6 +42,7 @@ class Simulation(dp.Simulation):
         self.dust.q.turb2 = None
         self.dust.qrec = None
         self.dust.S.shrink = None
+        self.dust.S.smax_hyd = None
         self.dust.q.updater = ["frag", "eff"]
         self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
@@ -56,9 +57,13 @@ class Simulation(dp.Simulation):
         self.dust.f.drift = None
         self.dust.f.dv = None
         self.dust.f.updater = ["dv"]
-        self.dust.p.drift = None
+        self.dust.p.frag = None
+        self.dust.p.stick = None
+        self.dust.p.fragtrans = None
+        self.dust.p.driftfrag = None
+
         self.dust.v.rad_flux = None
-        self.dust.p.updater = ["frag", "stick", "drift"]
+        self.dust.p.updater = ["frag", "stick","fragtrans", "driftfrag"]
 
         # Adjusting update orders
 
@@ -73,20 +78,40 @@ class Simulation(dp.Simulation):
         addelemtafter(updtordr, "f", "p")
         # move "a" after "f"
         updtordr.remove("a")
+        updtordr.remove("v")
         updtordr.remove("p")
-        addelemtafter(updtordr, "qrec", "f")
+        updtordr.remove("St")
+        updtordr.remove("H")
+        updtordr.remove("rho")
+        updtordr.remove("D")
+        updtordr.remove("eps")
 
+        addelemtafter(updtordr, "qrec", "f")
+        
         addelemtafter(updtordr, "a", "qrec")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
-
-        addelemtafter(updtordr, "p", "m")
-        # Add "q" after "m"
+        # Add St after "m"
+        addelemtafter(updtordr, "St", "m")
+        # Add "H" after "St"
+        addelemtafter(updtordr, "H", "St")
+        # Add "rho" after "H"
+        addelemtafter(updtordr, "rho", "H")
+        # Add "D" after "rho"
+        addelemtafter(updtordr, "D", "rho")
+        #add  "eps" after "D"
+        addelemtafter(updtordr, "eps", "D")
+        # Add "v" after "eps"
+        addelemtafter(updtordr, "v", "eps")
+        # Add "p" after "v"
+        addelemtafter(updtordr, "p", "v")
+        # Add "q" after "p"
         addelemtafter(updtordr, "q", "p")
         # Add "SigmaFloor" after "m"
         addelemtafter(updtordr, "SigmaFloor", "q")
         # Removing elements that are not used
         updtordr.remove("kernel")
+        print(updtordr)
         # Assign updateorder
         self.dust.updater = updtordr
 
@@ -347,6 +372,7 @@ class Simulation(dp.Simulation):
                 "rhos", rhos, description="Solid state density [g/cm³]"
             )
         # Probabilities
+
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
                 shape1), description="Fragmentation probability")
@@ -355,10 +381,14 @@ class Simulation(dp.Simulation):
             self.dust.p.stick = Field(self, np.zeros(
                 shape1), description="Sticking probability")
             self.dust.p.stick.updater = std.dust.p_stick
-        if self.dust.p.drift is None:
-            self.dust.p.drift = Field(self, np.zeros(
+        if self.dust.p.fragtrans is None:
+            self.dust.p.fragtrans = Field(self, np.zeros(
+                shape1), description="transition probability between fragmentation regimes")    
+            self.dust.p.fragtrans.updater = std.dust.p_frag_trans
+        if self.dust.p.driftfrag is None:
+            self.dust.p.driftfrag = Field(self, np.zeros(
                 shape1), description="Transition function from drift to turbulence")
-            self.dust.p.drift.updater = std.dust.p_drift
+            self.dust.p.driftfrag.updater = std.dust.p_drift_frag
 
         # Source terms
         if self.dust.S.ext is None:
@@ -384,6 +414,11 @@ class Simulation(dp.Simulation):
             self.dust.S.addfield(
                 "shrink", np.zeros(shape2Sigma), description="Total sources [g/cm²/s]"
             )
+        if self.dust.S.smax_hyd is None:
+            self.dust.S.addfield(
+                "smax_hyd", np.zeros(shape1), description="Total sources [g/cm²/s]"
+            )
+            self.dust.S.smax_hyd.updater = std.dust.S_smax_hyd
         # Stokes number
         if self.dust.St is None:
             self.dust.addfield(
