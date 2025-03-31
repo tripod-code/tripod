@@ -53,34 +53,19 @@ def dt_Sigma(sim):
         mask[-1:, :] = False
 
         mask2 = sim.dust.S.tot[:, 1] < 0.
+        mask2 = sim.dust.S.tot[:,1] * sim.dust.Sigma[:,0] - sim.dust.S.tot[:,0] * sim.dust.Sigma[:,1] < 0.
         f = sim.dust.Sigma[:,1]/sim.dust.Sigma.sum(-1)
         mask2 = np.logical_and(mask2, f<0.43)
         dsig_da = dsigda(sim)
         dt_pred = 10 * ((-0.1*  sim.dust.s.max[mask2] * dsig_da[mask2]) + sim.dust.Sigma[mask2,1] - sim.dust.f.crit* sim.dust.Sigma[mask2,:].sum(-1)) \
-                /(sim.dust.S.tot[mask2, 1] *(sim.dust.f.crit - 1.) + sim.dust.f.crit * sim.dust.S.tot[mask2, 0])
+                /(sim.dust.S.tot[mask2, 1] *(sim.dust.f.crit - 1.) + sim.dust.f.crit * sim.dust.S.tot[mask2, 0] + dsig_da[mask2] * sim.dust.s.sdot_coag[mask2] +sim.dust.S.smax_hyd[mask2]*dsig_da[mask2])
         dt_pred = np.where(dt_pred != dt_pred, 0, dt_pred)  
         dt_pred = np.abs(dt_pred)
         dt_pred = np.where(dt_pred == np.inf, 0, dt_pred)
 
         dt = np.ones_like(sim.dust.Sigma)*1e100
         dt[mask] = np.abs(sim.dust.Sigma[mask] / sim.dust.S.tot[mask])
-        a = np.asarray(dt_pred/dt[mask2,1])
-
-        """ with open("output.txt", "a") as f:
-            dt_new = np.maximum(dt[mask2,1],dt_pred)
-            if (len(dt_new) == 0):
-                dt_new = np.array([0])
-            f.write(f"t {sim.t/c.year} {dt.min()/c.year} {dt_new.min()/c.year}\n")
-
-        del_a = 1./dsigda(sim)[mask2]*  (sim.dust.f.crit * sim.dust.Sigma[mask2, :].sum(-1) + dt_pred/10. * sim.dust.f.crit * sim.dust.S.tot[mask2, :].sum(-1) - sim.dust.Sigma[mask2, 1] - dt_pred/10. *  sim.dust.S.tot[mask2, 1])
-        f_pred = (sim.dust.Sigma[mask2,1] + dt_pred/10. * sim.dust.S.tot[mask2,1])/(sim.dust.Sigma[mask2,:].sum(-1) + dt_pred/10. * sim.dust.S.tot[mask2,:].sum(-1))
-        del_a_old =  1./dsigda(sim)[mask2]*  (sim.dust.f.crit * sim.dust.Sigma[mask2, :].sum(-1) + dt[mask2,1]/10. * sim.dust.f.crit * sim.dust.S.tot[mask2, :].sum(-1) - sim.dust.Sigma[mask2, 1] - dt[mask2,1]/10. *  sim.dust.S.tot[mask2, 1])
-        f_pred_old = (sim.dust.Sigma[mask2,1] + dt[mask2,1]/10. * sim.dust.S.tot[mask2,1])/(sim.dust.Sigma[mask2,:].sum(-1) + dt[mask2,1]/10. * sim.dust.S.tot[mask2,:].sum(-1))
-        with open("output.txt", "a") as f:
-            for val1,val2,f_n,f_old ,val3 in zip(del_a/sim.dust.s.max[mask2],del_a_old/sim.dust.s.max[mask2], f_pred,f_pred_old,sim.grid.r[mask2]/c.au):
-                f.write(f"del_an : {val1},del_a_old: {val2}, {f_n}, {f_old}  distance: {val3}\n")
-        """
-        dt[mask2,1] = np.maximum(dt[mask2,1]*2.,dt_pred)
+        dt[mask2,1] = np.maximum(dt[mask2,1],dt_pred)
         return dt.min()
     return 1e100
 
@@ -91,7 +76,7 @@ def S_smax_hyd(sim):
     """
 
     Fi = Fi_sig1smax(sim)
-    S_hyd = dp_dust_f.s_hyd(Fi,sim.grid.ri)/sim.dust.Sigma[:,1]
+    S_hyd = (dp_dust_f.s_hyd(Fi,sim.grid.ri)[:,0] - sim.dust.S.hyd[:,1]*sim.dust.s.max)/sim.dust.Sigma[:,1]
 
     return S_hyd
 
@@ -122,17 +107,16 @@ def dt_smax(sim):
     dt_smax : float
         Particle growth time step"""
     # TODO: double check if this makes sense
+    mask2 = sim.dust.S.tot[:, 1] < 0.
+    mask2 = sim.dust.S.tot[:,1] * sim.dust.Sigma[:,0] - sim.dust.S.tot[:,0] * sim.dust.Sigma[:,1] < 0.
+    f = sim.dust.Sigma[:,1]/sim.dust.Sigma.sum(-1)
+    mask2 = np.logical_and(mask2, f<0.43)
+    smax_dot_hyd = sim.dust.S.smax_hyd
+    sim.dust.s.max.derivative()
 
-    # Ignoring boundaries.
-    # smax_dot = sim.dust.s.max.a()[1:-1]
-    # here we only take the derivative due to coagulation into account
-
-    dsmaxda = (sim.dust.s.max[2:]-sim.dust.s.max[:-2])/(sim.grid.r[2:]-sim.grid.r[:-2])
-
-    smax_dot_hyd = -(sim.dust.Fi.tot[1:-2, 1]+sim.dust.Fi.tot[2:-1, 1])/2. / sim.dust.Sigma[1:-1, 1] * dsmaxda*0
-
-    smax_dot = np.minimum(np.abs(sim.dust.s.sdot_coag[1:-1]),np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd))
+    smax_dot = np.minimum(np.abs(sim.dust.s.sdot_coag[1:-1]) , np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd[1:-1]))
     dt = sim.dust.s.max[1:-1] / (smax_dot + 1e-100)
+    dt[mask2[1:-1]] = 1e100
     return dt.min()
 
 
@@ -189,6 +173,7 @@ def finalize(sim):
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
     enforce_f(sim)
+    sim.dust.s.max.derivative()
     sim.dust.v.rad.update()
     sim.dust.Fi.update()
     sim.dust.S.coag.update()
@@ -519,7 +504,7 @@ def F_diff(sim, Sigma=None):
     if Sigma is None:
         Sigma = sim.dust.Sigma
 
-    Fi = dust_f.fi_diff(sim.dust.D[:, [0, 2]],
+    Fi = dust_f.fi_diff_no_limit(sim.dust.D[:, [0, 2]],
                         Sigma,
                         sim.gas.Sigma,
                         sim.dust.St[:, [0, 2]]*sim.dust.f.drift,
@@ -983,7 +968,7 @@ def D_mod(sim):
     grid cells will be set to zero to avoid unwanted
     behavior at the boundaries."""
     # warning this is only done beacuse opf the pluto code -> times gammma factor athe the end
-    v2 = sim.dust.delta.rad * sim.gas.cs**2*1.43
+    v2 = sim.dust.delta.rad * sim.gas.cs**2
     Diff = dp_dust_f.d(v2, sim.grid.OmegaK, sim.dust.St*sim.dust.f.drift)
     Diff[:2, ...] = 0.
     Diff[-2:, ...] = 0.

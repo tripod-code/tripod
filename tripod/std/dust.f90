@@ -356,7 +356,7 @@ subroutine pfrag(vrel, vfrag, pf, Nr)
     integer :: ir
 
     do ir = 1, Nr
-        pf(ir) = exp(-(5.d0 * (min(vrel(ir) / vfrag(ir), 1d0) - 1d0))**2)
+        pf(ir) = exp(-(5.d0 * (min(vrel(ir) / vfrag(ir), 1d0) - 1d0))**2d0)
     end do
 
 end subroutine pfrag
@@ -1186,3 +1186,72 @@ subroutine jacobian_shrink_generator(Sigma, smin, smax,slim,  q, dt,f_crit,amax_
     end do
 
 end subroutine jacobian_shrink_generator
+
+subroutine fi_diff_no_limit(D, SigmaD, SigmaG, St, u, r, ri, Fi, Nr, Nm)
+    ! Subroutine calculates the diffusive dust fluxes at the grid cell interfaces.
+    ! The flux at the boundaries is assumed to be constant.
+    !
+    ! Parameters
+    ! ----------
+    ! D(Nr, Nm) : Dust diffusivity
+    ! SigmaD(Nr, Nm) : Dust surface densities
+    ! SigmaG(Nr) : Gas surface density
+    ! St(Nr, Nm) : Stokes number
+    ! u(Nr) : Gas turbulent RMS velocity
+    ! r(Nr) : Radial grid cell centers
+    ! ri(Nr+1) : Radial grid cell interfaces
+    ! Nr : Number of radial grid cells
+    ! Nm : Number of mass bins
+    !
+    ! Returns
+    ! -------
+    ! Fi(Nr+1, Nm) : Diffusive fluxes at grid cell interfaces
+  
+  
+    implicit none
+  
+    double precision, intent(in)  :: D(Nr, Nm)
+    double precision, intent(in)  :: SigmaD(Nr, Nm)
+    double precision, intent(in)  :: SigmaG(Nr)
+    double precision, intent(in)  :: St(Nr, Nm)
+    double precision, intent(in)  :: u(Nr)
+    double precision, intent(in)  :: r(Nr)
+    double precision, intent(in)  :: ri(Nr+1)
+    double precision, intent(out) :: Fi(Nr+1, Nm)
+    integer,          intent(in)  :: Nr
+    integer,          intent(in)  :: Nm
+  
+    double precision :: Di(Nr+1, Nm)
+    double precision :: eps(Nr, Nm)
+    double precision :: gradepsi(Nr+1, Nm)
+    double precision :: SigDi(Nr+1, Nm)
+    double precision :: SigGi(Nr+1)
+    double precision :: Sti(Nr+1, Nm)
+    integer :: ir
+    integer :: i
+  
+    Fi(:, :) = 0.d0
+  
+    call interp1d(ri, r, SigmaG, SigGi, Nr)
+  
+    do i=1, Nm
+      call interp1d(ri(:), r(:), D(:, i), Di(:, i), Nr)
+      call interp1d(ri(:), r(:), SigmaD(:, i), SigDi(:, i), Nr)
+      eps(:, i) = SigmaD(:, i) / SigmaG(:)
+      call interp1d(ri(:), r(:), St(:, i), Sti(:, i), Nr)
+    end do
+  
+    do ir=2, Nr
+      gradepsi(ir, :) = ( eps(ir, :) - eps(ir-1, :) ) / ( r(ir) - r(ir-1) )
+    end do
+  
+    do i=1, Nm
+        do ir=2, Nr
+            Fi(ir, i) = -Di(ir, i) * SigGi(ir) * gradepsi(ir, i)
+        enddo
+    end do
+  
+    Fi(   1, :) = Fi( 2, :)
+    Fi(Nr+1, :) = Fi(Nr, :)
+  
+  end subroutine fi_diff_no_limit

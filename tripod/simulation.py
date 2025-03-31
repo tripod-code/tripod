@@ -111,7 +111,6 @@ class Simulation(dp.Simulation):
         addelemtafter(updtordr, "SigmaFloor", "q")
         # Removing elements that are not used
         updtordr.remove("kernel")
-        print(updtordr)
         # Assign updateorder
         self.dust.updater = updtordr
 
@@ -419,6 +418,9 @@ class Simulation(dp.Simulation):
                 "smax_hyd", np.zeros(shape1), description="Total sources [g/cm²/s]"
             )
             self.dust.S.smax_hyd.updater = std.dust.S_smax_hyd
+            updtordr = self.dust.S.updateorder
+            updtordr.append("smax_hyd")
+            self.dust.S.updater = updtordr
         # Stokes number
         if self.dust.St is None:
             self.dust.addfield(
