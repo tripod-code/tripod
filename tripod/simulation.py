@@ -5,6 +5,7 @@ from simframe import Instruction
 from simframe import Integrator
 from simframe import schemes
 from simframe.frame import Field
+from simframe.io.writers import hdf5writer
 from . import std
 
 
@@ -37,10 +38,16 @@ class Simulation(dp.Simulation):
         self.dust.q.sweep = None
         self.dust.q.turb1 = None
         self.dust.q.turb2 = None
+        self.dust.qrec = None
+        self.dust.S.shrink = None
+        self.dust.S.smax_hyd = None
         self.dust.q.updater = ["frag", "eff"]
         self.dust.addgroup("s", description="Characteristic particle sizes")
         self.dust.s.min = None
         self.dust.s.max = None
+        self.dust.s.addgroup("boundary", description="boundary conditions of smax")
+        self.dust.s.boundary.inner = None
+        self.dust.s.boundary.outer = None
         self.dust.s.lim = None
         self.dust.addgroup(
             "f", description="Fudge factors")
@@ -48,8 +55,13 @@ class Simulation(dp.Simulation):
         self.dust.f.drift = None
         self.dust.f.dv = None
         self.dust.f.updater = ["dv"]
-        self.dust.p.drift = None
-        self.dust.p.updater = ["frag", "stick", "drift"]
+        self.dust.p.frag = None
+        self.dust.p.stick = None
+        self.dust.p.fragtrans = None
+        self.dust.p.driftfrag = None
+
+        self.dust.v.rad_flux = None
+        self.dust.p.updater = ["frag", "stick","fragtrans", "driftfrag"]
 
         # Adjusting update orders
 
@@ -64,13 +76,37 @@ class Simulation(dp.Simulation):
         addelemtafter(updtordr, "f", "p")
         # move "a" after "f"
         updtordr.remove("a")
-        addelemtafter(updtordr, "a", "f")
+        updtordr.remove("v")
+        updtordr.remove("p")
+        updtordr.remove("St")
+        updtordr.remove("H")
+        updtordr.remove("rho")
+        updtordr.remove("D")
+        updtordr.remove("eps")
+
+        addelemtafter(updtordr, "qrec", "f")
+        
+        addelemtafter(updtordr, "a", "qrec")
         # Add "m" after "a"
         addelemtafter(updtordr, "m", "a")
-        # Add "q" after "m"
-        addelemtafter(updtordr, "q", "m")
+        # Add St after "m"
+        addelemtafter(updtordr, "St", "m")
+        # Add "H" after "St"
+        addelemtafter(updtordr, "H", "St")
+        # Add "rho" after "H"
+        addelemtafter(updtordr, "rho", "H")
+        # Add "D" after "rho"
+        addelemtafter(updtordr, "D", "rho")
+        #add  "eps" after "D"
+        addelemtafter(updtordr, "eps", "D")
+        # Add "v" after "eps"
+        addelemtafter(updtordr, "v", "eps")
+        # Add "p" after "v"
+        addelemtafter(updtordr, "p", "v")
+        # Add "q" after "p"
+        addelemtafter(updtordr, "q", "p")
         # Add "SigmaFloor" after "m"
-        addelemtafter(updtordr, "SigmaFloor", "m")
+        addelemtafter(updtordr, "SigmaFloor", "q")
         # Removing elements that are not used
         updtordr.remove("kernel")
         # Assign updateorder
@@ -149,6 +185,19 @@ class Simulation(dp.Simulation):
 
         self._makeradialgrid()
 
+    def _timestep_accounting(self):
+        shape1 = (int(self.grid.Nr))
+        # Radial grid and long particle grid
+        shape2 = (int(self.grid.Nr), int(self.grid._Nm_long))
+
+        self.addgroup("timestep",description="timesteps accounting for different processes")
+        self.timestep.addfield(
+                "Sigma", np.zeros(shape2), description="timestep due to changes in Sigma")
+        self.timestep.addfield(
+                "smax_coag", np.zeros(shape1), description="timestep due to growth of smax")
+        self.timestep.addfield(
+                "smax_shrink", np.zeros(shape1), description="timestep due to shikage of smax")
+
     def _makeradialgrid(self):
         '''Function sets the mass grid using the parameters set in ``Simulation.ini``.'''
         if self.grid.ri is None:
@@ -192,6 +241,8 @@ class Simulation(dp.Simulation):
         self._initializegrid()
         self._initializegas()
         self._initializedust()
+        if(std.dust.DEBUG):
+            self._timestep_accounting()
 
         # Set integrator
         if self.integrator is None:
@@ -254,7 +305,7 @@ class Simulation(dp.Simulation):
             self.dust.addfield(
                 "D", np.zeros(shape2), description="Diffusivity [cm²/s]"
             )
-            self.dust.D.updater = dp.std.dust.D
+            self.dust.D.updater = std.dust.D_mod
         # Deltas
         if self.dust.delta.rad is None:
             delta = self.ini.gas.alpha * np.ones(shape1)
@@ -318,6 +369,7 @@ class Simulation(dp.Simulation):
                 "rhos", rhos, description="Solid state density [g/cm³]"
             )
         # Probabilities
+
         if self.dust.p.frag is None:
             self.dust.p.frag = Field(self, np.zeros(
                 shape1), description="Fragmentation probability")
@@ -326,10 +378,14 @@ class Simulation(dp.Simulation):
             self.dust.p.stick = Field(self, np.zeros(
                 shape1), description="Sticking probability")
             self.dust.p.stick.updater = std.dust.p_stick
-        if self.dust.p.drift is None:
-            self.dust.p.drift = Field(self, np.zeros(
+        if self.dust.p.fragtrans is None:
+            self.dust.p.fragtrans = Field(self, np.zeros(
+                shape1), description="transition probability between fragmentation regimes")    
+            self.dust.p.fragtrans.updater = std.dust.p_frag_trans
+        if self.dust.p.driftfrag is None:
+            self.dust.p.driftfrag = Field(self, np.zeros(
                 shape1), description="Transition function from drift to turbulence")
-            self.dust.p.drift.updater = std.dust.p_drift
+            self.dust.p.driftfrag.updater = std.dust.p_drift_frag
 
         # Source terms
         if self.dust.S.ext is None:
@@ -351,6 +407,18 @@ class Simulation(dp.Simulation):
                 "tot", np.zeros(shape2Sigma), description="Total sources [g/cm²/s]"
             )
             self.dust.S.tot.updater = std.dust.S_tot
+        if self.dust.S.shrink is None:
+            self.dust.S.addfield(
+                "shrink", np.zeros(shape2Sigma), description="Total sources [g/cm²/s]"
+            )
+        if self.dust.S.smax_hyd is None:
+            self.dust.S.addfield(
+                "smax_hyd", np.zeros(shape1), description="Total sources [g/cm²/s]"
+            )
+            self.dust.S.smax_hyd.updater = std.dust.S_smax_hyd
+            updtordr = self.dust.S.updateorder
+            updtordr.append("smax_hyd")
+            self.dust.S.updater = updtordr
         # Stokes number
         if self.dust.St is None:
             self.dust.addfield(
@@ -367,7 +435,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "azi", np.zeros(shape3), description="Relative azimuthal velocity [cm/s]"
             )
-            self.dust.v.rel.azi.updater = dp.std.dust.vrel_azimuthal_drift
+            self.dust.v.rel.azi.updater = std.dust.vrel_azimuthal_drift
         if self.dust.v.rel.brown is None:
             self.dust.v.rel.addfield(
                 "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]"
@@ -377,7 +445,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "rad", np.zeros(shape3), description="Relative radial velocity [cm/s]"
             )
-            self.dust.v.rel.rad.updater = dp.std.dust.vrel_radial_drift
+            self.dust.v.rel.rad.updater = std.dust.vrel_radial_drift
         if self.dust.v.rel.turb is None:
             self.dust.v.rel.addfield(
                 "turb", np.zeros(shape3), description="Relative turbulent velocity [cm/s]"
@@ -387,7 +455,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "vert", np.zeros(shape3), description="Relative vertical settling velocity [cm/s]"
             )
-            self.dust.v.rel.vert.updater = dp.std.dust.vrel_vertical_settling
+            self.dust.v.rel.vert.updater = std.dust.vrel_vertical_settling
         if self.dust.v.rel.tot is None:
             self.dust.v.rel.addfield(
                 "tot", np.zeros(shape3), description="Total relative velocity [cm/s]"
@@ -403,9 +471,15 @@ class Simulation(dp.Simulation):
                 "rad", np.zeros(shape2), description="Radial velocity [cm/s]"
             )
             self.dust.v.rad.updater = dp.std.dust.vrad
+        if self.dust.v.rad_flux is None:
+            self.dust.v.addfield(
+                "rad_flux", np.zeros(shape2), description="Radial velocity modified to claulate the proper flux[cm/s]"
+            )
+            self.dust.v.rad_flux.updater = std.dust.vrad_mod
+
         # Distribution exponents
         if self.dust.q.eff is None:
-            q = np.ones(shape1)  # will be computed in the updater
+            q = np.ones(shape1)*-3.5  # will be computed in the updater
             self.dust.q.addfield(
                 "eff", q, description="Calculated distribution exponent"
             )
@@ -415,13 +489,18 @@ class Simulation(dp.Simulation):
                 "frag", np.ones(shape1), description="Fragmentation distribution exponent"
             )
             self.dust.q.frag.updater = std.dust.q_frag
+        if self.dust.qrec is None:
+            self.dust.addfield(
+                "qrec",q , description="reconstructed distribution exponent"
+            )
+            self.dust.qrec.updater = std.dust.q_rec
         if self.dust.q.turb1 is None:
             self.dust.q.addfield(
-                "turb1", -3.75, description="Size distribution exponent in first turbulence regime"
+                "turb1", -3.5, description="Size distribution exponent in first turbulence regime"
             )
         if self.dust.q.turb2 is None:
             self.dust.q.addfield(
-                "turb2", -3.5, description="Size distribution exponent in second turbulence regime"
+                "turb2", -3.75, description="Size distribution exponent in second turbulence regime"
             )
         if self.dust.q.drfrag is None:
             self.dust.q.addfield(
@@ -467,6 +546,8 @@ class Simulation(dp.Simulation):
             self.dust.s.addfield(
                 "max", smax, description="Maximum particle size"
             )
+            self.dust.s.addfield(
+                "_maxOld", smax, description="Maximum particle size")
         self.dust.s.max.differentiator = std.dust.smax_deriv
 
         if self.dust.s.lim is None:
@@ -506,13 +587,13 @@ class Simulation(dp.Simulation):
             shape2Sigmaravel), description="Right-hand side of matrix equation [g/cm²]"
         )
         # storing coagulation and shrinkage separately to be able to ignore the shrinkate in the timestep  computation
-        self.dust.s._sdot_coag = Field(
+        self.dust.s.sdot_coag = Field(
             self, np.zeros(shape1),
             description="coagulation source term for amax [cm/s]"
         )
-        self.dust.s._sdot_shrink = Field(
+        self.dust.s.sdot_shrink = Field(
             self, np.zeros(shape1),
-            description="shrinkage source term for amax [cm²/s]"
+            description="shrinkage source term for amax [cm²/s]",
         )
         # State vector
         self.dust.addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
@@ -536,5 +617,22 @@ class Simulation(dp.Simulation):
                 self.grid.ri[::-1],
                 self.dust.Sigma[::-1],
                 condition="val",
-                value=0.1 * self.dust.SigmaFloor[-1]
+                value=0.1 * self.dust.SigmaFloor[-1,1]
+            )
+
+        # Boundary conditions of smax 
+        if self.dust.s.boundary.inner is None:
+            self.dust.s.boundary.inner = dp.utils.Boundary(
+                self.grid.r,
+                self.grid.ri,
+                self.dust.Sigma[...,1]*self.dust.s.max,
+                condition="const_grad"
+            )
+        if self.dust.s.boundary.outer is None:
+            self.dust.s.boundary.outer = dp.utils.Boundary(
+                self.grid.r[::-1],
+                self.grid.ri[::-1],
+                self.dust.Sigma[::-1,1]*self.dust.s.max[::-1],
+                condition="val",
+                value= self.dust.SigmaFloor[-1,1]*self.dust.s.max[-1]
             )
