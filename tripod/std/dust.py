@@ -140,6 +140,19 @@ def prepare(sim):
     sim.dust.s._maxOld = sim.dust.s.max
     sim.dust.s._prev_sdot_coag = sim.dust.s.sdot_coag
     s_max_deriv = sim.dust.s.max.derivative()
+    if(True):
+        mask = (sim.dust.v.rel.tot[:, -2, -1] / sim.dust.v.frag) > 0.94
+        damp_factor = 0.01
+        r0 = sim.grid.r[0] 
+        width = sim.grid.r[0]*0.5 
+        # Alternative falloff function: Gaussian
+        damp_coag = 1 - (1 - damp_factor) * np.exp(-((sim.grid.r - r0) ** 2) / (2 * width ** 2))
+
+        if(mask[0] or sim.t > 1e4*c.year):
+            sim.dust.s._damp  = damp_coag
+        else:
+            sim.dust.s._damp = np.ones_like(damp_coag)
+
     enforce_f(sim)
     sim.dust.S.ext.update()
     sim.dust.S.coag.update()
@@ -167,6 +180,10 @@ def finalize(sim):
     sim.dust.s.max = np.maximum(
         1.5 * sim.dust.s.min, sim.dust._Y[Nr * Nm_s:] / sim.dust.Sigma[..., 1])
 
+    if sim.dust.s.boundary.inner.condition == "const_pow":
+        p = np.log(sim.dust.s.max[2] /sim.dust.s.max[1]) / np.log(sim.grid.r[2] / sim.grid.r[1])
+        sim.dust.s.max[0] = sim.dust.s.max[1] * (sim.grid.r[0] / sim.grid.r[1]) ** p
+    
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
     enforce_f(sim)
@@ -720,7 +737,7 @@ def S_coag(sim, Sigma=None):
 def enforce_f(sim):
 
     delta = np.maximum( 0., sim.dust.f.crit * sim.dust.Sigma[...].sum(-1) - sim.dust.Sigma[:,1])
-    sim.dust.s.max += delta * dadsig(sim) 
+    sim.dust.s.max = np.maximum( sim.dust.s.lim*np.ones_like(sim.dust.s.max) ,sim.dust.s.max + delta * dadsig(sim))
     sim.dust.Sigma[:,1] += delta
     sim.dust.Sigma[:,0] -= delta
     sim.dust.qrec.update()
@@ -759,6 +776,21 @@ def S_tot(sim, Sigma=None):
         if Shyd is None:
             Shyd = sim.dust.S.hyd
     return Scoag + Shyd + Sext
+
+def vrel_brownian_motion(sim):
+    """Function calculates the relative particle velocities due to Brownian motion.
+    The maximum value is set to the sound speed.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    vrel : Field
+        Relative velocities"""
+    return dust_f.vrel_brownian_motion(sim.gas.cs, sim.dust.m, sim.gas.T)
 
 def q_eff(sim):
     """Function calculates the equilibrium exponent of the distribution.
@@ -886,7 +918,7 @@ def D_mod(sim):
     # warning this is only done beacuse opf the pluto code -> times gammma factor athe the end
     v2 = sim.dust.delta.rad * sim.gas.cs**2
     Diff = dp_dust_f.d(v2, sim.grid.OmegaK, sim.dust.St*sim.dust.f.drift)
-    Diff[:2, ...] = 0.
+    Diff[:1, ...] = 0.
     Diff[-2:, ...] = 0.
     return Diff
 
@@ -1068,6 +1100,8 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
 
     # Note: s.max.derivative also sets s.sdot_shrink which is used below
     s_max_deriv = dust.s.max.derivative()
+
+    s_max_deriv *= dust.s._damp
 
 
     S_Sigma_ext = np.zeros_like(dust.Sigma)

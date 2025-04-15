@@ -433,7 +433,7 @@ class Simulation(dp.Simulation):
             self.dust.v.rel.addfield(
                 "brown", np.zeros(shape3), description="Relative Brownian motion velocity [cm/s]"
             )
-            self.dust.v.rel.brown.updater = dp.std.dust.vrel_brownian_motion
+            self.dust.v.rel.brown.updater = std.dust.vrel_brownian_motion
         if self.dust.v.rel.rad is None:
             self.dust.v.rel.addfield(
                 "rad", np.zeros(shape3), description="Relative radial velocity [cm/s]"
@@ -574,6 +574,9 @@ class Simulation(dp.Simulation):
         # to calculate the fluxes through the boundaries in case of implicit integration.
         self.dust._SigmaOld = Field(
             self, self.dust.Sigma, description="Previous value of surface density [g/cm²]"
+        )
+        self.dust.s._damp = Field(
+            self, np.ones(shape1), description="Previous value of surface density [g/cm²]"
         )
         # The right-hand side of the matrix equation is stored in a hidden field
         self.dust._rhs = Field(self, np.zeros(

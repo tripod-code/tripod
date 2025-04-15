@@ -152,6 +152,56 @@ subroutine fi_diff(D, SigmaD, SigmaG, St, u, r, ri, Fi, Nr, Nm_s)
 
 end subroutine fi_diff
 
+subroutine vrel_brownian_motion(cs, m, T, vrel, Nr, Nm)
+    ! Subroutine calculates the relative particle velocities due to Brownian motion.
+    ! Its maximum value is the sound speed.
+    !
+    ! Parameters
+    ! ----------
+    ! cs(Nr) : Sound speed
+    ! m(Nr, Nm) : Particle masses
+    ! T(Nr) : Temperature
+    ! Nr : Number of radial grid cells
+    ! Nm : Number of mass bins
+    !
+    ! Returns
+    ! -------
+    ! vrel(Nr, Nm, Nm) : Relative velocities
+
+    use constants, only : k_B, pi
+
+    implicit none
+
+    double precision, intent(in) :: cs(Nr)
+    double precision, intent(in) :: m(Nr, Nm)
+    double precision, intent(in) :: T(Nr)
+    double precision, intent(out) :: vrel(Nr, Nm, Nm)
+    integer, intent(in) :: Nr
+    integer, intent(in) :: Nm
+
+    integer :: ir, i, j
+    double precision :: fac1
+    double precision :: fac2(Nr)
+    double precision :: dum
+
+    fac1 = 8.d0 * k_B / pi
+
+    do ir = 1, Nr
+        fac2(ir) = fac1 * T(ir)
+    end do
+
+    do i = 1, Nm
+        do j = 1, i
+            do ir = 1, Nr
+                dum = min(sqrt(fac2(ir) * (m(ir, j) + m(ir, i)) / (m(ir, j) * m(ir, i))), cs(ir))
+                vrel(ir, j, i) = dum
+                vrel(ir, i, j) = dum
+            end do
+        end do
+    end do
+
+end subroutine vrel_brownian_motion
+
 subroutine calculate_m(a, rhos, fill, masses, Nr, Nm)
     ! Subroutine calculates the particle masses.
     !
