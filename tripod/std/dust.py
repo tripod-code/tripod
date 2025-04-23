@@ -209,7 +209,6 @@ def smax_initial(sim):
     smax : Field
         initial maximum particle sizes"""
 
-    # TODO: needs some check if aIniMax < smin
 
     # Helper variables
     smin = sim.dust.s.min
@@ -530,36 +529,6 @@ def F_diff(sim, Sigma=None):
     return Fi
 
 
-# TODO: This function is not needed after a DustPy update.
-
-def F_tot(sim, Sigma=None):
-    """Function calculates the total mass fluxes through grid cell interfaces.
-
-    Parameters
-    ----------
-    sim : Frame
-        Parent simulation frame
-    Sigma : Field, optional, default : None
-        Surface density to be used if not None
-
-    Returns
-    -------
-    Ftot : Field
-        Total mass flux through interfaces"""
-    Fi = np.zeros_like(sim.dust.Fi.tot)
-    if Sigma is None:
-        Fdiff = sim.dust.Fi.diff
-        Fadv = sim.dust.Fi.adv
-    else:
-        Fdiff = sim.dust.Fi.diff.updater.beat(sim, Sigma=Sigma)
-        Fadv = sim.dust.Fi.adv.updater.beat(sim, Sigma=Sigma)
-    if Fdiff is not None:
-        Fi += Fdiff
-    if Fadv is not None:
-        Fi += Fadv
-    return Fi
-
-
 def m(sim):
     """Function calculates the particle mass from the particle sizes.
 
@@ -679,17 +648,6 @@ def smax_deriv(sim, t, smax):
         sim.dust.SigmaFloor)
 
     # Prevents unwanted growth of smax at the inner boundary Experimental
-    if(True):
-        mask = (sim.dust.v.rel.tot[:, -2, -1]/ sim.dust.v.frag) > 0.94
-        damp_factor = 0.05
-        r0 = 2.5e-1*c.au
-        ir = np.argmin(abs(r0-sim.grid.r))
-        width = 5e-2*c.au
-        damp_coag = damp_factor + (1 - damp_factor) * (0.5 * (1 + np.tanh((sim.grid.r - r0) / width)))
-        damp_coag = damp_factor + (1 - damp_factor) / (1 + np.exp(-(sim.grid.r - r0) / width))
-
-        if(mask[0:ir].all()):
-            ds_coag *= damp_coag
 
     sim.dust.s.sdot_shrink = np.zeros_like(sim.dust.s.max)
     sim.dust.s.sdot_coag = ds_coag
@@ -959,7 +917,6 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
     smaxSig = sim.dust._Y[Nm_s * Nr:]
     smaxSig_rhs = smaxSig[...]
 
-    # TODO: double check if diffusion works as intended for amax.
     # Creating the sparse matrix
     sim.dust.v.rad_flux.update()
     A, B, C = dp_dust_f.jacobian_hydrodynamic_generator(
@@ -1100,9 +1057,6 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
 
     # Note: s.max.derivative also sets s.sdot_shrink which is used below
     s_max_deriv = dust.s.max.derivative()
-
-    s_max_deriv *= dust.s._damp
-
 
     S_Sigma_ext = np.zeros_like(dust.Sigma)
     S_Sigma_ext[1:-1, ...] += dust.S.ext[1:-1, ...]

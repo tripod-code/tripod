@@ -122,6 +122,7 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
             i_up = 0
         else:
             i_up = np.where(a_i < a_max[ir])[0][-1]
+            i_up = min(i_up, na - 1)  # Ensure i_up does not exceed na - 1
 
             # filling all bins that are strictly below a_max
 

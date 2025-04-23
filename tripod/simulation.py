@@ -549,7 +549,6 @@ class Simulation(dp.Simulation):
 
         # Floor value
         if self.dust.SigmaFloor is None:
-            # TODO: What is a reasonable value for this in TriPoD
             SigmaFloor = 1.e-50 * np.ones(shape2Sigma)
             self.dust.addfield(
                 "SigmaFloor", SigmaFloor, description="Floor value of surface density [g/cm²]"
