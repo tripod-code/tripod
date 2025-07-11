@@ -1,6 +1,7 @@
 python_sources = [
     '__init__.py',
     'dust.py',
+    'gas.py',
     'sim.py',
 ]
 
