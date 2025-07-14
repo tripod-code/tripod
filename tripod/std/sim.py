@@ -19,7 +19,7 @@ def dt(sim):
     dt : float
         Time step"""
 
-    dt_gas = dp_std.gas.dt(sim) or 1.e100
+    dt_gas = std.gas.dt_compo(sim) or 1.e100
     dt_dust = std.dust.dt(sim) or 1.e100
     dt = np.minimum(dt_gas, dt_dust)
     return sim.t.cfl * dt

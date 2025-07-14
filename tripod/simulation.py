@@ -8,6 +8,7 @@ from simframe import schemes
 from simframe.frame import Field
 from simframe.io.writers import hdf5writer
 from dustpy.utils import Boundary
+from functools import partial
 from . import std
 
 
@@ -673,12 +674,22 @@ class Simulation(dp.Simulation):
             "mu", mu, description="Molecular weight [g]")
         self.gas.components.__dict__[name].addfield(
             "Sigma", Sigma, description="Surface density [g/cm²]")
+        self.gas.components.__dict__[name].addfield(
+            "Fi", np.zeros(self.grid.Nr + 1 ), description="Surface density [g/cm²]")
+        self.gas.components.__dict__[name].Fi.updater = partial(std.gas.Fi_compo,compkey=name)
         # Adding source terms
         self.gas.components.__dict__[name].addgroup("S", description="Sources")
         self.gas.components.__dict__[name].S.addfield(
             "ext", np.zeros_like(Sigma), description="External sources [g/cm²/s]")
+        self.gas.components.__dict__[name].S.addfield(
+            "hyd", np.zeros_like(Sigma), description="External sources [g/cm²/s]")
+        self.gas.components.__dict__[name].S.hyd.updater = partial(std.gas.S_hyd_compo,compkey=name)
+        self.gas.components.__dict__[name].S.addfield(
+            "tot", np.zeros_like(Sigma), description="External sources [g/cm²/s]")
+        self.gas.components.__dict__[name].S.tot.updater = partial(std.gas.S_tot_compo,compkey=name)    
         self.gas.components.__dict__[name].updater = ["S"]
-        self.gas.components.__dict__[name].S.updater = ["ext"]
+        self.gas.components.__dict__[name].S.updater = ["ext","hyd","tot"]
+
 
         # Adding component to updater
         self.gas.components.updater = self.gas.components.updateorder + [name]

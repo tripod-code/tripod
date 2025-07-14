@@ -133,3 +133,101 @@ def mu(sim):
             ret += comp.Sigma / comp.mu
 
     return sim.gas.Sigma/ret
+
+
+def dt_compo(sim):
+    """Function returns the timestep depending on the source terms.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    dt : float
+        Time step"""
+    dt = 1.e100
+    for key,comp in sim.gas.components.__dict__.items():
+        if not key.startswith("_"):
+            dt = min(dt,gas_f.timestep(comp.S.tot,comp.Sigma,sim.gas.SigmaFloor))
+
+    return dt
+
+
+
+def Fi_compo(sim,compkey = "default"):
+    """Function returns the fluxes at the boundaries for each component.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    Returns
+    -------
+    Fi : Field
+        Fluxes at the boundaries for each component"""
+    comp = sim.gas.components.__dict__.get(compkey)
+    if comp is None:
+        raise ValueError(f"Component {compkey} not found in gas components.")
+
+    return gas_f.fi(comp.Sigma, sim.gas.v.rad,sim.grid.r,sim.grid.ri)
+
+
+def S_hyd_compo(sim, compkey="default"):
+    """Function returns the hydrodynamical source terms for each component.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    compkey : str, optional
+        Key of the component, by default "default"
+        
+    Returns
+    -------
+    S_hyd : Field
+        Hydrodynamical source terms for each component"""
+    comp = sim.gas.components.__dict__.get(compkey)
+
+    
+    return gas_f.s_hyd(comp.Fi,sim.grid.ri)
+
+
+def S_tot_compo(sim, compkey="default"):
+    """Function returns the external source terms for each component.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    compkey : str, optional
+        Key of the component, by default "default"
+        
+    Returns
+    -------
+    S_ext : Field
+        External source terms for each component"""
+    comp = sim.gas.components.__dict__.get(compkey)
+    
+    return  comp.S.hyd + comp.S.ext
+    
+def S_ext_total(sim):
+    """Function returns the total external source terms for all components.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+        
+    Returns
+    -------
+    S_ext_total : Field
+        Total external source terms for all components"""
+    ret = np.zeros_like(sim.gas.Sigma)
+    for key, comp in sim.gas.components.__dict__.items():
+        if key.startswith("_"):
+            continue
+        ret += comp.S.ext
+        
+    return ret
