@@ -657,7 +657,7 @@ class Simulation(dp.Simulation):
                 condition="val",
                 value= self.dust.SigmaFloor[-1,1]*self.dust.s.max[-1]
             )
-    def addgascomponent(self, name, Sigma, mu, tracer=False, description=""):
+    def addgascomponent(self, name, Sigma, mu, tracer=False, includedust=False, description=""):
 
         if name in self.gas.components.__dict__:
             raise RuntimeError(
@@ -670,6 +670,8 @@ class Simulation(dp.Simulation):
         self.gas.components.addgroup(name, description=description)
         self.gas.components.__dict__[name].addfield(
             "tracer", tracer, description="Is this component tracer?")
+        self.gas.components.__dict__[name].addfield(
+            "includedust", includedust, description="Is this component tracer?")
         self.gas.components.__dict__[name].addfield(
             "mu", mu, description="Molecular weight [g]")
         self.gas.components.__dict__[name].addfield(
@@ -713,20 +715,51 @@ class Simulation(dp.Simulation):
             value=0.1*self.gas.SigmaFloor[-1]
         )
 
-        # Jacobinator
-        self.gas.components.__dict__[
-            name].Sigma.jacobinator = dp.std.gas.jacobian
+        if not includedust:
+            # Jacobinator
+            self.gas.components.__dict__[
+                name].Sigma.jacobinator = dp.std.gas.jacobian
 
-        # Integrator
-        inst = Instruction(
-            dp.std.gas.impl_1_direct,
-            self.gas.components.__dict__[name].Sigma,
-            controller={
-                "boundary": self.gas.components.__dict__[name].boundary,
-                "Sext": self.gas.components.__dict__[name].S.ext,
-            },
-            description="{}: implicit 1st-order direct solver".format(name)
-        )
-        self.integrator.instructions.append(
-            inst
-        )
+            # Integrator
+            inst = Instruction(
+                dp.std.gas.impl_1_direct,
+                self.gas.components.__dict__[name].Sigma,
+                controller={
+                    "boundary": self.gas.components.__dict__[name].boundary,
+                    "Sext": self.gas.components.__dict__[name].S.ext,
+                },
+                description="{}: implicit 1st-order direct solver".format(name)
+            )
+            self.integrator.instructions.append(
+                inst)
+        else:
+            self.gas.components.__dict__[name].addgroup("dust", description="Dust component")
+
+            # add dust surface densit
+            shape = (int(self.grid.Nr), int(self.grid._Nm_short))
+            self.gas.components.__dict__[name].dust.addfield(
+            "Sigma_dust", np.zeros(shape), description="Surface density [g/cm²]")
+
+            self.gas.components.__dict__[name].dust.addfield(
+            "_Sigma_dustOld", np.zeros(shape), description="Surface density [g/cm²]")
+            self.gas.components.__dict__[name].dust.addfield(
+            "Sext_dust", np.zeros(shape), description="source")
+
+            # State vector
+            self.gas.components.__dict__[name].addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
+                            description="Dust state vector (siggas , sig0, sig1)")
+            self.gas.components.__dict__[name]._Y.jacobinator = std.compo.Y_jacobian
+
+            # The right-hand side of the state vector matrix equation is stored in a hidden field
+            self.gas.components.__dict__[name]._Y_rhs = Field(self, np.zeros_like(
+                self.gas.components.__dict__[name]._Y), description="Right-hand side of state vector matrix equation")
+                        # Integrator
+            inst = Instruction(
+                std.compo._f_impl_1_direct_compo,
+                self.gas.components.__dict__[name]._Y,
+                controller={"name": name },
+                description="{}: implicit 1st-order direct solver for tracers".format(name))
+            
+            self.integrator.instructions.append(
+                inst)
+        

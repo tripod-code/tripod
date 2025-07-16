@@ -3,6 +3,7 @@ python_sources = [
     'dust.py',
     'gas.py',
     'sim.py',
+    'compo.py'
 ]
 
 py3.install_sources(python_sources, subdir: 'tripod/std')

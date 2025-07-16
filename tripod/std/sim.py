@@ -36,6 +36,7 @@ def prepare_implicit_dust(sim):
     #dp_std.gas.prepare(sim)
     std.gas.prepare(sim)
     std.dust.prepare(sim)
+    std.compo.prepare(sim)
 
 
 def finalize_implicit_dust(sim):
@@ -50,3 +51,4 @@ def finalize_implicit_dust(sim):
     #dp_std.gas.finalize(sim)
     std.gas.finalize(sim)
     std.dust.finalize(sim)
+    std.compo.finalize(sim)
