@@ -404,8 +404,8 @@ def jacobian(sim, x, dx=None, *args, **kwargs):
             sim.dust._rhs[:Nm_s] = sim.dust.Sigma[1] * (r[0] / r[1]) ** p
         # Constant power law
         elif sim.dust.boundary.inner.condition == "const_pow":
-            p = np.log(sim.dust.Sigma[2] /
-                       sim.dust.Sigma[1]) / np.log(r[2] / r[1])
+            p = np.log(sim.dust.Sigma[2,0] /
+                       sim.dust.Sigma[1,0]) / np.log(r[2] / r[1])
             K1 = - (r[0] / r[1]) ** p
             dat_in[Nm_s:2 * Nm_s] = -K1 / dt
             sim.dust._rhs[:Nm_s] = 0.

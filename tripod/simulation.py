@@ -745,10 +745,15 @@ class Simulation(dp.Simulation):
             self.gas.components.__dict__[name].dust.addfield(
             "Sext_dust", np.zeros(shape), description="source")
 
+            self.gas.components.__dict__[name].addfield(
+            "Tsub", 0 , description="Sublimatio Temperature [K]")
+            self.gas.components.__dict__[name].addfield(
+            "nu", 0 , description="attempt frequency for sublimation")
+
             # State vector
             self.gas.components.__dict__[name].addfield("_Y", np.zeros((int(self.grid._Nm_short) + 1) * int(self.grid.Nr)),
                             description="Dust state vector (siggas , sig0, sig1)")
-            self.gas.components.__dict__[name]._Y.jacobinator = std.compo.Y_jacobian
+            self.gas.components.__dict__[name]._Y.jacobinator = partial(std.compo.Y_jacobian,name=name)
 
             # The right-hand side of the state vector matrix equation is stored in a hidden field
             self.gas.components.__dict__[name]._Y_rhs = Field(self, np.zeros_like(

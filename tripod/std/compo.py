@@ -66,13 +66,50 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
     # Getting the Jacobian of Gas
     J_Gas =  dp.std.gas.jacobian(sim,x, dx= dt)
 
-    # Stitching the Jacobians together
-    J = J_Sigma.copy()
-    J.data = np.hstack((J_Gas.data, J_Sigma.data))
-    J.indices = np.hstack((J_Gas.indices, J_Sigma.indices + J_Gas.shape[0]))
-    J.indptr = np.hstack((J_Gas.indptr, J_Sigma.indptr[1:] + len(J_Gas.data)))
+    # Jacopbian for evaporation and condensation
+    J_compo = jacobian_compo(sim, x, dx=dt,name=kwargs.get("name", None))
+
+    # Convert to COO format for easier manipulation
+    J_Gas_coo = J_Gas.tocoo()
+    J_Sigma_coo = J_Sigma.tocoo()
+    J_compo_coo = J_compo.tocoo()
+
+    # Combine row indices (offset for block structure)
+    rows = np.hstack([
+        J_Gas_coo.row,
+        J_Sigma_coo.row + J_Gas.shape[0],
+        J_compo_coo.row
+    ])
+    
+    # Combine column indices (offset for block structure)
+    cols = np.hstack([
+        J_Gas_coo.col,
+        J_Sigma_coo.col + J_Gas.shape[1],
+        J_compo_coo.col
+    ])
+    
+    # Combine data
+    data = np.hstack([
+        J_Gas_coo.data,
+        J_Sigma_coo.data,
+        J_compo_coo.data
+    ])
+
+    # Total size
     Ntot = J_Gas.shape[0] + J_Sigma.shape[0]
-    J._shape = (Ntot, Ntot)
+
+    # check for nans 
+    if np.isnan(data).any():
+        #prind indices of NaNs
+        nan_indices = np.where(np.isnan(data))[0]
+        print(f"NaN values found at indices: {nan_indices}")
+        print("Rows:", rows[nan_indices])
+        print("Cols:", cols[nan_indices])
+        raise ValueError("Jacobian contains NaN values. Please check the input data.")
+    
+    
+    # Create the combined matrix
+    J = sp.coo_matrix((data, (rows, cols)), shape=(Ntot, Ntot))
 
     return J
 
@@ -116,12 +153,22 @@ def _f_impl_1_direct_compo(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     Nr = int(Y0._owner.grid.Nr)
     Nm_s = int(Y0._owner.grid._Nm_short)
 
+    #set first row of jacobian to zero 
+    jac.data[jac.row == 0] = 0.0
+
+
     # Set the right-hand side to 0 for the dust to be handeled like the global dust
     if Y0._owner.dust.boundary.inner.condition.startswith("const"):
         rhs[Nr:Nr+Nm_s] = 0.
 
-    if Y0._owner.dust.boundary.inner.condition.startswith("const"):
+    if Y0._owner.dust.boundary.outer.condition.startswith("const"):
         rhs[-Nm_s:] = 0.
+
+    
+    if Y0._owner.dust.boundary.outer.condition == "val":
+        rhs[-Nm_s:] =  Y0[-Nm_s:]
+
+    
 
     S = np.hstack((comp.S.ext.ravel(), comp.dust.Sext_dust.ravel()))
 
@@ -142,3 +189,205 @@ def _f_impl_1_direct_compo(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     Y1 = Y1_ravel.reshape(Y0.shape)
 
     return Y1 - Y0
+
+
+
+def jacobian_compo(sim, x, dx=None, *args, **kwargs):
+    """Function calculates the Jacobian for implicit integration caused by sublimation.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    x : IntVar
+        Integration variable
+    dx : float, optional, default : None
+        stepsize
+    args : additional positional arguments
+    kwargs : additional keyword arguments
+
+    Returns
+    -------
+    jac : Sparse matrix
+        Dust Jacobian
+
+    Notes
+    -----
+    Function returns the Jacobian for ``Simulation.dust.Sigma.ravel()``
+    instead of ``Simulation.dust.Sigma``. The Jacobian is stored as
+    sparse matrix."""
+    # Helper variables for convenience
+    if dx is None:
+        dt = x.stepsize
+    else:
+        dt = dx
+
+    Nr = int(sim.grid.Nr)
+    Nm_s = int(sim.grid._Nm_short)
+
+    # Total problem size
+    Ntot = int((Nr * Nm_s) + Nr)
+
+
+    # Insert source terms here 
+    sublimation = L_sublimation(sim, name=kwargs.get("name", None)).ravel("F")
+    condensation = L_condensation(sim, name=kwargs.get("name", None), Pstick=kwargs.get("Pstick", 1.0)).ravel("F")
+
+    # set source terms to zero at the boundaries
+    sublimation[0] = 0
+    sublimation[Nr] = 0
+
+    sublimation[-1] = 0
+    sublimation[-Nr] = 0
+
+
+    condensation[-Nr] = 0
+    condensation[-1] = 0
+
+    condensation[0] = 0
+    condensation[Nr] = 0
+
+    #condensation[:Nm_s] = 0
+    #condensation[-Nm_s:] = 0
+
+
+    #Gas affecting terms 
+    row_con = np.hstack((np.arange(Nr),np.arange(Nr)))
+    col_con = np.hstack((np.arange(Nr),np.arange(Nr)))
+    #dust affecting terms
+    row_cond = np.hstack((np.arange(Nr,Ntot,2), np.arange(Nr+1,Ntot,2)))
+    col_cond = np.hstack((np.arange(Nr),np.arange(Nr)))
+
+    # sublimation
+    row_sub = np.hstack((np.arange(Nr), np.arange(Nr)))
+    col_sub = np.hstack((np.arange(Nr,Ntot,2), np.arange(Nr+1,Ntot,2)))
+    row_subd = np.hstack((np.arange(Nr,Ntot,2), np.arange(Nr+1,Ntot,2)))
+    col_subd = np.hstack((np.arange(Nr,Ntot,2), np.arange(Nr+1,Ntot,2)))
+
+    dat = np.hstack((sublimation,-sublimation,-condensation,condensation))
+    row = np.hstack((row_sub, row_subd, row_con, row_cond))
+    col = np.hstack((col_sub, col_subd, col_con, col_cond))
+
+
+    gen = (dat, (row, col))
+    # Building sparse matrix of coagulation Jacobian
+    J = sp.csc_matrix(
+        gen,
+        shape=(Ntot, Ntot)
+    )
+    return J
+
+
+
+def A_grains(sim):
+    """ returns total surface area of all dust grains in the simulation
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    A_grains : float
+        Total surface area of all dust grains in the simulation for each bin
+    """
+
+    I = np.zeros_like(sim.dust.Sigma)
+    a_int = (sim.dust.s.max*sim.dust.s.min)**0.5
+    mask4 = sim.dust.qrec == -4
+    [mask4]
+    I[mask4,1] = 1./(np.log(sim.dust.s.max[mask4]) -np.log(a_int[mask4])) * (1./a_int[mask4] - 1./sim.dust.s.max[mask4])
+    I[mask4,0] = 1./(np.log(a_int[mask4]) -np.log(sim.dust.s.min[mask4])) * (1./sim.dust.s.min[mask4] - 1./a_int[mask4])
+    mask3 = sim.dust.qrec == -3
+    I[mask3,1] = (np.log(sim.dust.s.max[mask3]) -np.log(a_int[mask3])) / (sim.dust.s.max[mask3] - a_int[mask3])
+    I[mask3,0] = (np.log(a_int[mask3]) - np.log(sim.dust.s.min[mask3])) / (a_int[mask3] - sim.dust.s.min[mask3])
+    mask = np.logical_and(~mask4 , ~mask3)
+    I[mask,1] =  (sim.dust.qrec[mask] +4) / (sim.dust.qrec[mask] +3) * (sim.dust.s.max[mask]**(sim.dust.qrec[mask] + 3) - a_int[mask]**(sim.dust.qrec[mask] + 3))/(sim.dust.s.max[mask]**(sim.dust.qrec[mask] + 4) - a_int[mask]**(sim.dust.qrec[mask] + 4))
+    I[mask,0] = (sim.dust.qrec[mask] +4) / (sim.dust.qrec[mask] +3) * (a_int[mask]**(sim.dust.qrec[mask] + 3) - sim.dust.s.min[mask]**(sim.dust.qrec[mask] + 3))/(a_int[mask]**(sim.dust.qrec[mask] + 4) - sim.dust.s.min[mask]**(sim.dust.qrec[mask] + 4))
+
+    A_grains = sim.dust.Sigma * 3./sim.dust.rhos[:,[0,2]] * I 
+    return A_grains
+
+
+
+# L * u = S where S is the source term
+def L_condensation(sim,name=None,Pstick=1):
+    """Function calculates the condensation source term for a given component.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    name : str, optional, default : None
+        Name of the component. If None, the first component is used.
+    Pstick : float, optional, default : 1
+        Sticking probability
+        
+    Returns
+    -------
+    S_condensation : Field
+        Condensation source term for the given component
+    """
+    if name is None:
+        name = list(sim.gas.components.__dict__.keys())[0]
+            
+    comp = sim.gas.components.__dict__[name]
+    if not comp.includedust:
+        raise ValueError(f"Component {name} does not include dust.")
+    
+    # Calculate the total surface area of all dust grains
+    A = A_grains(sim)
+
+    L_con = A/4./(2*np.pi)**0.5 /  sim.gas.Hp[:,None] *((8.*c.k_B*sim.gas.T[:,None])/(np.pi*comp.mu))**0.5 * Pstick
+
+    #print("L_con",np.array(L_con))
+    return L_con
+
+
+def L_sublimation(sim,name=None,N_bind=1e15):
+    """Function calculates the sublimation source term for a given component.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    name : str, optional, default : None
+        Name of the component. If None, the first component is used.
+    N_bind : float, optional, default : 1e15
+        number of binding sites per cm² on the dust grain surface
+        
+    Returns
+    -------
+    L_sublimation : Field
+        Sublimation source term for the given component
+    """
+
+    # Calculate the total surface area of all dust grains
+    A = A_grains(sim)
+
+    if name is None:
+        name = list(sim.gas.components.__dict__.keys())[0]
+            
+    comp = sim.gas.components.__dict__[name]
+    if not comp.includedust:
+        raise ValueError(f"Component {name} does not include dust.")
+    
+
+    N_layer = comp.dust.Sigma_dust/(A * N_bind*comp.mu)
+
+    mask = N_layer < 1e-2
+
+    L_sub = np.where(mask, comp.nu * np.exp(-comp.Tsub/sim.gas.T[:,None]), \
+                    A / comp.dust.Sigma_dust *  N_bind * comp.nu * comp.mu * (1. - np.exp(-N_layer)) \
+                    * np.exp(-comp.Tsub/sim.gas.T[:,None]))
+    
+
+
+    
+    # print all the nans and where they occor       
+    mask =comp.dust.Sigma_dust < 1e-18
+
+    print("L_sub",np.array(L_sub[mask]),np.array((1. - np.exp(-comp.dust.Sigma_dust/(A * N_bind*comp.mu)))[mask]))
+
+    return L_sub
