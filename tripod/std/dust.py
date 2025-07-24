@@ -139,19 +139,6 @@ def prepare(sim):
     sim.dust._SigmaOld[...] = sim.dust.Sigma[...]
     sim.dust.s._maxOld = sim.dust.s.max
     sim.dust.s._prev_sdot_coag = sim.dust.s.sdot_coag
-    s_max_deriv = sim.dust.s.max.derivative()
-    if(True):
-        mask = (sim.dust.v.rel.tot[:, -2, -1] / sim.dust.v.frag) > 0.94
-        damp_factor = 0.01
-        r0 = sim.grid.r[0] 
-        width = sim.grid.r[0]*0.5 
-        # Alternative falloff function: Gaussian
-        damp_coag = 1 - (1 - damp_factor) * np.exp(-((sim.grid.r - r0) ** 2) / (2 * width ** 2))
-
-        if(mask[0] or sim.t > 1e4*c.year):
-            sim.dust.s._damp  = damp_coag
-        else:
-            sim.dust.s._damp = np.ones_like(damp_coag)
 
     enforce_f(sim)
     sim.dust.S.ext.update()
@@ -183,7 +170,9 @@ def finalize(sim):
     if sim.dust.s.boundary.inner.condition == "const_pow":
         p = np.log(sim.dust.s.max[2] /sim.dust.s.max[1]) / np.log(sim.grid.r[2] / sim.grid.r[1])
         sim.dust.s.max[0] = sim.dust.s.max[1] * (sim.grid.r[0] / sim.grid.r[1]) ** p
-    
+    mask = sim.dust.v.rel.tot[:, -2, -1] == 0 
+    sim.dust.s.max[mask] = sim.dust.s.lim
+
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
     enforce_f(sim)
@@ -693,11 +682,12 @@ def S_coag(sim, Sigma=None):
 
 
 def enforce_f(sim):
-
+    # do not shrink if there is no growth
+    mask = sim.dust.v.rel.tot[:, -2, -1] > 0
     delta = np.maximum( 0., sim.dust.f.crit * sim.dust.Sigma[...].sum(-1) - sim.dust.Sigma[:,1])
-    sim.dust.s.max = np.maximum( sim.dust.s.lim*np.ones_like(sim.dust.s.max) ,sim.dust.s.max + delta * dadsig(sim))
-    sim.dust.Sigma[:,1] += delta
-    sim.dust.Sigma[:,0] -= delta
+    sim.dust.s.max[mask] = np.maximum( sim.dust.s.lim*np.ones_like(sim.dust.s.max) ,sim.dust.s.max + delta * dadsig(sim))[mask]
+    sim.dust.Sigma[mask,1] += delta[mask]
+    sim.dust.Sigma[mask,0] -= delta[mask]
     sim.dust.qrec.update()
 
 
@@ -1066,6 +1056,9 @@ def _f_impl_1_direct(x0, Y0, dx, jac=None, rhs=None, *args, **kwargs):
     S_smax_expl = np.zeros_like(dust.s.max)
     S_smax_expl[1:-1] = s_max_deriv[1:-1] * dust.Sigma[1:-1, 1] \
         + (dust.S.ext[1:-1,1] + dust.S.coag[1:-1,1]) * dust.s.max[1:-1] 
+
+    mask = dust.v.rel.tot[:, -2, -1] == 0
+    S_smax_expl[mask] = 0.
     # Stitching both parts together
     S = np.hstack((S_Sigma_ext.ravel(), S_smax_expl))
 

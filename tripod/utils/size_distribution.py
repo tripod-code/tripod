@@ -149,3 +149,31 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
                 sig_da[ir, :i_up+1].sum() * sigma_d[ir]
 
     return a, a_i, sig_da
+
+
+def average_size(q,a2,a1):
+    """
+    Computes the average size of a power-law size distribution.
+
+    Parameters
+    ----------
+    q : float
+        Size distribution exponent.
+    a2 : float
+        Upper size limit.
+    a1 : float
+        Lower size limit.
+
+    Returns
+    -------
+    a_avg : float
+        Average size of the distribution.
+    """
+    a_avg = np.zeros_like(q)
+    mask = q == -4 
+    a_avg[mask] = ((a2 - a1) / (np.log(a2) - np.log(a1)))[mask]
+    mask = q == -5 
+    a_avg[mask] = (a1*a2/(a2 - a1) * np.log(a2/a1))[mask]
+    mask = (q != -4) & (q != -5)
+    a_avg[mask] = ((q + 4) / (q + 5) * (a2**(q + 5) - a1**(q + 5)) / (a2**(q + 4) - a1**(q + 4)))[mask]
+    return a_avg
