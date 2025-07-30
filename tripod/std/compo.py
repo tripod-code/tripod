@@ -341,7 +341,6 @@ def L_condensation(sim,name=None,Pstick=1):
 
     L_con = A/4./(2*np.pi)**0.5 /  sim.gas.Hp[:,None] *((8.*c.k_B*sim.gas.T[:,None])/(np.pi*comp.mu))**0.5 * Pstick
 
-    #print("L_con",np.array(L_con))
     return L_con
 
 
@@ -381,13 +380,5 @@ def L_sublimation(sim,name=None,N_bind=1e15):
     L_sub = np.where(mask, comp.nu * np.exp(-comp.Tsub/sim.gas.T[:,None]), \
                     A / comp.dust.Sigma_dust *  N_bind * comp.nu * comp.mu * (1. - np.exp(-N_layer)) \
                     * np.exp(-comp.Tsub/sim.gas.T[:,None]))
-    
-
-
-    
-    # print all the nans and where they occor       
-    mask =comp.dust.Sigma_dust < 1e-18
-
-    print("L_sub",np.array(L_sub[mask]),np.array((1. - np.exp(-comp.dust.Sigma_dust/(A * N_bind*comp.mu)))[mask]))
 
     return L_sub

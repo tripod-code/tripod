@@ -691,7 +691,7 @@ class Simulation(dp.Simulation):
         self.gas.components.__dict__[name].S.addfield(
             "tot", np.zeros_like(Sigma), description="External sources [g/cm²/s]")
         self.gas.components.__dict__[name].S.tot.updater = partial(std.gas.S_tot_compo,compkey=name)    
-        self.gas.components.__dict__[name].updater = ["S"]
+        self.gas.components.__dict__[name].updater = ["Fi","S"]
         self.gas.components.__dict__[name].S.updater = ["ext","hyd","tot"]
 
 
