@@ -629,5 +629,5 @@ class Simulation(dp.Simulation):
                 self.grid.ri[::-1],
                 self.dust.Sigma[::-1,1]*self.dust.s.max[::-1],
                 condition="val",
-                value= self.dust.SigmaFloor[-1,1]*self.dust.s.max[-1]
+                value= 0.1 * self.dust.SigmaFloor[-1,1]*self.dust.s.max[-1]
             )

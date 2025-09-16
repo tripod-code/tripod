@@ -212,8 +212,8 @@ def smax_initial(sim):
         # Exponent of pressure gradient
         gamma *= sim.grid.r / P
         # Maximum drift limited particle size with safety margin
-        ad = 5e-3 * 2. / np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma / sim.dust.fill[:, 0] \
-            * sim.dust.rhos[:, 0] * (sim.grid.OmegaK * sim.grid.r) ** 2. / sim.gas.cs ** 2. / gamma
+        ad = 5e-3 * 2. / np.pi * sim.ini.dust.d2gRatio * sim.gas.Sigma \
+        /(sim.dust.fill[:, 0]* sim.dust.rhos[:, 0]) * (sim.grid.OmegaK * sim.grid.r) ** 2. / sim.gas.cs ** 2. / gamma
         aIni = np.minimum(sim.ini.dust.aIniMax, ad)
 
         # Enforce initial drift limit
@@ -472,7 +472,7 @@ def a(sim):
 
     Returns
     -------
-    a : Field
+    a : Field [a0, fudge * a1, a1, fudge * amax, amax]
         Particle sizes"""
     # interpolate between drift and turbulence dominated pre-factor
     return dust_f.calculate_a(sim.dust.s.min, sim.dust.s.max, sim.dust.qrec, sim.dust.f.dv, sim.grid._Nm_long)
