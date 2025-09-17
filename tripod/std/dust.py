@@ -171,7 +171,7 @@ def finalize(sim):
         p = np.log(sim.dust.s.max[2] /sim.dust.s.max[1]) / np.log(sim.grid.r[2] / sim.grid.r[1])
         sim.dust.s.max[0] = sim.dust.s.max[1] * (sim.grid.r[0] / sim.grid.r[1]) ** p
     mask = sim.dust.v.rel.tot[:, -2, -1] == 0 
-    sim.dust.s.max[mask] = sim.dust.s.lim
+    sim.dust.s.max[mask] = 1.5 * sim.dust.s.min[mask]
 
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
@@ -636,6 +636,11 @@ def smax_deriv(sim, t, smax):
         sim.dust.Sigma,
         sim.dust.SigmaFloor)
 
+    # ds_coag is the coagulation source term for smax if any of the relative velocities is greater than the fragmentation velocity
+    #mask = np.logical_and(ds_coag > 0, np.any(sim.dust.v.rel.tot[:, :, -1] > sim.dust.v.frag[:,None],axis=-1))
+    #mask = np.logical_and(mask, sim.dust.St[:, -1] > 0.9)
+    #ds_coag[mask] = 0.0
+
     # Prevents unwanted growth of smax at the inner boundary Experimental
 
     sim.dust.s.sdot_shrink = np.zeros_like(sim.dust.s.max)
@@ -683,7 +688,7 @@ def S_coag(sim, Sigma=None):
 
 def enforce_f(sim):
     # do not shrink if there is no growth
-    mask = sim.dust.v.rel.tot[:, -2, -1] > 0
+    mask = np.logical_and(sim.dust.v.rel.tot[:, -2, -1] > 0 , sim.dust.s.max > sim.dust.s.lim)
     delta = np.maximum( 0., sim.dust.f.crit * sim.dust.Sigma[...].sum(-1) - sim.dust.Sigma[:,1])
     sim.dust.s.max[mask] = np.maximum( sim.dust.s.lim*np.ones_like(sim.dust.s.max) ,sim.dust.s.max + delta * dadsig(sim))[mask]
     sim.dust.Sigma[mask,1] += delta[mask]
