@@ -111,7 +111,7 @@ def dt_smax(sim):
     mask2 = np.logical_and(mask2, f<0.43)
     smax_dot_hyd = sim.dust.S.smax_hyd
 
-    smax_dot = np.minimum(np.abs(sim.dust.s.sdot_coag[1:-1]) , np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd[1:-1]))
+    smax_dot = np.maximum(np.abs(sim.dust.s.sdot_coag[1:-1]) , np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd[1:-1]))
     dt = sim.dust.s.max[1:-1] / (smax_dot + 1e-100)
     dt[mask2[1:-1]] = 1e100
     return dt.min()
@@ -167,17 +167,24 @@ def finalize(sim):
     sim.dust.s.max = np.maximum(
         1.5 * sim.dust.s.min, sim.dust._Y[Nr * Nm_s:] / sim.dust.Sigma[..., 1])
 
-    if sim.dust.s.boundary.inner.condition == "const_pow":
-        p = np.log(sim.dust.s.max[2] /sim.dust.s.max[1]) / np.log(sim.grid.r[2] / sim.grid.r[1])
-        sim.dust.s.max[0] = sim.dust.s.max[1] * (sim.grid.r[0] / sim.grid.r[1]) ** p
     mask = sim.dust.v.rel.tot[:, -2, -1] == 0 
     sim.dust.s.max[mask] = 1.5 * sim.dust.s.min[mask]
 
     dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
     enforce_f(sim)
-    sim.dust.s.max.derivative()
+    "rec', 'a', 'm', 'St', 'H', 'rho', 'D', 'eps', 'v' -> not nice way to update s.max.derivative for next timestep calculation"
+    sim.dust.qrec.update()
+    sim.dust.a.update()
+    sim.dust.St.update()
+    sim.dust.m.update()
+    sim.dust.H.update()
+    sim.dust.rho.update()
+    sim.dust.D.update()
+    sim.dust.eps.update()
     sim.dust.v.rad.update()
+    sim.dust.v.rel.update()
+    sim.dust.s.max.derivative()
     sim.dust.Fi.update()
     sim.dust.S.coag.update()
     sim.dust.S.ext.update()
