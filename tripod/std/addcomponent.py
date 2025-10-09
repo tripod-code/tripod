@@ -10,7 +10,7 @@ import dustpy.constants as c
 
 
 
-def addcomponent_c(self, name, gas_value, mu, dust_value = None , dust_tracer=False, gas_active=False, gas_tracer=False, description=""):
+def addcomponent_c(self, name, gas_value, mu, dust_value = None ,dust_active=False,dust_tracer=False, gas_active=False, gas_tracer=False, description=""):
      
     #check if component with name already exists
     if name in self.components.__dict__:
@@ -20,12 +20,13 @@ def addcomponent_c(self, name, gas_value, mu, dust_value = None , dust_tracer=Fa
 
     #initalize gas and dust fields
     description = description + name
-    comp = Component(self, dust_tracer=dust_tracer, gas_active=gas_active, gas_tracer=gas_tracer, description=description)
+    comp = Component(self, dust_tracer=dust_tracer,dust_active=dust_active, gas_active=gas_active, gas_tracer=gas_tracer, description=description)
 
     #Jacobinator for state vector
     comp._Y.jacobinator = partial(compo.c_jacobian,component=comp)
 
-
+    assert not (comp.dust._tracer and comp.dust._active), "Dust component cannot be both active and tracer."
+    assert not (comp.gas._tracer and comp.gas._active), "Gas component cannot be both active and tracer."
 
     #TODO cleaner initalisation
     if comp.gas._active:
@@ -47,6 +48,9 @@ def addcomponent_c(self, name, gas_value, mu, dust_value = None , dust_tracer=Fa
         if dust_value is None:
             raise RuntimeError("Dust value must be provided if dust_tracer is True.")
         comp.dust.value = dust_value
+
+    if comp.dust._active:
+        comp.dust.Sigma = dust_value
 
 
     # Adding component to updater
@@ -89,6 +93,15 @@ def addcomponent_c(self, name, gas_value, mu, dust_value = None , dust_tracer=Fa
         comp.dust.boundary.outer = Boundary(self.grid.r[::-1], self.grid.ri[::-1], comp.dust.value[::-1])
         comp.dust.boundary.outer.setcondition("val", dust_value[-1,:])
 
+    if dust_active:
+        comp.dust.addgroup("boundary")
+
+        comp.dust.boundary.inner = Boundary(self.grid.r, self.grid.ri, comp.dust.Sigma)
+        comp.dust.boundary.inner.setcondition("const_grad")
+        
+        comp.dust.boundary.outer = Boundary(self.grid.r[::-1], self.grid.ri[::-1], comp.dust.Sigma[::-1])
+        comp.dust.boundary.outer.setcondition("val", self.dust.SigmaFloor[-1,:])
+
 
 
     inst = Instruction(
@@ -101,7 +114,7 @@ def addcomponent_c(self, name, gas_value, mu, dust_value = None , dust_tracer=Fa
                     "name": name},)
     
 
-    if comp.gas._active:
+    if comp.gas._active or comp.dust._active:
         upd = Instruction(schemes.update, self.components.__dict__[name]._Y, description="Update {}".format(name))
         self.integrator.instructions.insert(2, upd)
         self.integrator.instructions.insert(2, inst)

@@ -2,10 +2,10 @@ import numpy as np
 from simframe.frame import Group
 import dustpy.constants as c
 class Component(Group):
-    def __init__(self, owner, updater=None,dust_tracer= False,gas_active=False,gas_tracer=False,description=""):
+    def __init__(self, owner, updater=None,dust_tracer= False,dust_active=False,gas_active=False,gas_tracer=False,description=""):
         super().__init__(owner, updater=updater, description=description)
 
-        dust = DustComponent(owner,active=dust_tracer, description="Dust related fields")
+        dust = DustComponent(owner,tracer=dust_tracer,active=dust_active, description="Dust related fields")
         self.dust = dust
 
         gas = GasComponent(owner,active=gas_active,tracer=gas_tracer, description="Gas related fields")
@@ -17,7 +17,8 @@ class Component(Group):
         self.description = desc
 
         # Initalize combined state vector 2*Nr for dust, Nr for gas (added if poth are present)
-        n = owner.grid.Nr * (gas_active or gas_tracer) + dust_tracer * owner.grid.Nr*2
+        n = owner.grid.Nr * (gas_active or gas_tracer) + (dust_tracer or dust_active) * owner.grid.Nr*2
+
         self.addfield("_Y",np.zeros(n), description="Combined state vector for component [???]")
         self.addfield("_S",np.zeros(n), description="Combined source term for component [???/s]")
         self.addfield("_Y_rhs",np.zeros(n), description="Right-hand side for implicit solver [???/s]")
@@ -34,12 +35,16 @@ class Component(Group):
 
 
 class DustComponent(Group):
-    def __init__(self, owner, updater=None, active=False, description=""):
+    def __init__(self, owner, updater=None, tracer=False,active=False, description=""):
         super().__init__(owner, updater=updater, description=description)
         
-        self._tracer = active
+        self._tracer = tracer
+        self._active = active
+        assert not (self._tracer and self._active), "Dust component cannot be both active and tracer."
+        self.addfield("_Sigma", np.zeros_like(owner.dust.Sigma), description="Dust surface density [g/cm²]")
         self.addfield("_value", np.zeros_like(owner.dust.Sigma), description="tracer value [???]")
         self.addfield("_S", np.zeros_like(owner.dust.Sigma), description="tracer source term [???/s]")
+        self.addfield("_Sigma_dot", np.zeros_like(owner.dust.Sigma), description="Gas surface density source term [g/cm²/s]")
         self.addfield("_S_Sigma", np.zeros_like(owner.dust.Sigma), description="Source term for dust surface density [g/cm²]")
     
     @property
@@ -81,6 +86,31 @@ class DustComponent(Group):
         else:
             raise RuntimeError("Do not set Sigma source for inactive dust species.")
         
+    @property
+    def Sigma(self):
+        if self._active:
+            return self._Sigma
+        return 0. * self._Sigma
+    
+    @Sigma.setter
+    def Sigma(self, value):
+        if self._active:
+            self._Sigma = value
+        else:
+            raise RuntimeError("Do not set Sigma for inactive dust species.")       
+        
+    @property
+    def Sigma_dot(self):
+        if self._active:
+            return self._Sigma_dot
+        return 0. * self._Sigma_dot
+    
+    @Sigma_dot.setter
+    def Sigma_dot(self, value):
+        if self._active:
+            self._Sigma_dot = value
+        else:
+            raise RuntimeError("Do not set Sigma source for inactive dust species.")
 
 class GasComponent(Group):
     def __init__(self, owner, updater=None, active=False,tracer=True, description=""):
