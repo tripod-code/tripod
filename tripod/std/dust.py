@@ -265,9 +265,11 @@ def finalize(sim):
             if(nm.startswith("_")):
                 continue
             if(cint.dust._active):
-                has_components = True
                 temp += cint.dust.Sigma
-                cint.dust.Sigma = np.maximum(sim.dust.SigmaFloor, cint.dust.Sigma)
+                cint.dust.Sigma = np.where(
+                    cint.dust.Sigma > sim.dust.SigmaFloor,
+                    cint.dust.Sigma,0.1*sim.dust.SigmaFloor)
+                
         sim.dust.Sigma = np.maximum(temp, sim.dust.SigmaFloor)
 
 
