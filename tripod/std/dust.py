@@ -4,15 +4,9 @@ import dustpy.constants as c
 from dustpy.std import dust_f as dp_dust_f
 import dustpy.std.dust as dp_dust
 from tripod.std import dust_f
-
 from simframe.integration import Scheme
-
 import numpy as np
-
 import scipy.sparse as sp
-
-DEBUG = False
-
 
 def dt(sim):
     """Function calculates the time step from dust.
@@ -93,7 +87,7 @@ def dt_compo(sim):
                 dt_int[mask] = np.abs(comp.dust.Sigma[mask] / comp.dust.S.tot[mask])
 
                 dt = min(dt,dt_int.min())
-    return 1e100
+    return dt
 
 
 def S_smax_hyd(sim):

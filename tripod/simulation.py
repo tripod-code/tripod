@@ -241,9 +241,6 @@ class Simulation(dp.Simulation):
         self._initializegrid()
         self._initializegas()
         self._initializedust()
-        
-        if(std.dust.DEBUG):
-            self._timestep_accounting()
 
         # Set integrator
         if self.integrator is None:

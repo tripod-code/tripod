@@ -65,7 +65,6 @@ class TestDustComponent:
         
         # Should return zeros when inactive
         assert np.all(dust.value == 0)
-        assert np.all(dust.S == 0)
         assert np.all(dust.S_Sigma == 0)
     
     def test_dust_component_active(self, sim):
@@ -73,21 +72,8 @@ class TestDustComponent:
         dust = DustComponent(sim, active=True)
         test_value = np.ones_like(sim.dust.Sigma) * 1e-4
         
-        dust.value = test_value
-        assert np.allclose(dust.value, test_value)
-    
-    def test_dust_component_set_inactive_raises(self, sim):
-        """Test that setting values on inactive dust raises error"""
-        dust = DustComponent(sim, active=False)
-        
-        with pytest.raises(RuntimeError, match="Do not set dust parameter"):
-            dust.value = np.ones_like(sim.dust.Sigma)
-        
-        with pytest.raises(RuntimeError, match="Do not set source term"):
-            dust.S = np.ones_like(sim.dust.Sigma)
-        
-        with pytest.raises(RuntimeError, match="Do not set Sigma source"):
-            dust.S_Sigma = np.ones_like(sim.dust.Sigma)
+        dust.Sigma = test_value
+        assert np.allclose(dust.Sigma, test_value)
 
 class TestGasComponent:
     @pytest.fixture

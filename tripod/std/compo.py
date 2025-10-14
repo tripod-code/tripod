@@ -30,11 +30,11 @@ def set_state_vector_components(sim):
             continue
 
         #gas component
-        if comp.dust._active == False and (comp.dust._tracer == False) and (comp.gas._active == True):
+        if comp.dust._active == False and (comp.dust._tracer == False) and (comp.gas._active == True) and (comp.gas._tracer == False):
             comp._Y = comp.gas.Sigma
             comp._S = comp.gas.Sigma_dot
         #gas tracer
-        elif comp.dust._active == False and (comp.dust._tracer == False) and (comp.gas._tracer == True):
+        elif comp.dust._active == False and (comp.dust._tracer == False) and (comp.gas._tracer == True) and (comp.gas._active == False):
             comp._Y = comp.gas.value*sim.gas.Sigma # tracer int variable = tracer * Sigma
             comp._S = comp.gas.value_dot*sim.gas.Sigma + comp.gas.value*sim.gas.S.ext
         #dust tracer

@@ -26,7 +26,7 @@ class Component(Group):
 
         #Set updater 
         lst = []
-        if dust_tracer:
+        if dust_tracer or dust_active:
             lst.append("dust")
         if gas_active or gas_tracer:
             lst.append("gas")
