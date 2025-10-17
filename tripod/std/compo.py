@@ -24,6 +24,13 @@ def prepare(sim):
 
 
 def set_state_vector_components(sim):
+    """Function sets the state vector for all components in the simulation. comp._Y and comp._S are set according to the component type.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame"""
+    
     #iterate over all components and set the state vector
     for name, comp in sim.components.__dict__.items():
         if(name.startswith("_")):
@@ -108,6 +115,24 @@ def finalize(sim):
 
 
 def Y_jacobian(sim, x, dx=None, *args, **kwargs):
+    """Function calculates the Jacobian for implicit integration of components with both dust and gas 
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    x : IntVar
+        Integration variable
+    dx : float, optional
+        stepsize defaults to x.stepsize
+    args : additional positional arguments
+    kwargs : additional keyword arguments
+
+    Returns
+    -------
+    jac : Sparse matrix
+        Dust and Gas Jacobian"""
+    
     # Helper variables for convenience
     if dx is None:
         dt = x.stepsize

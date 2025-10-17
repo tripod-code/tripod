@@ -159,11 +159,19 @@ def rhos_compo(sim):
     return res[:,None] * np.ones_like(sim.dust.rhos)
 
 def Fi_sig1smax (sim):
-    """
-    Function that calculates the total flux of the Sigma[1] and s.max 
+    """Function that calculates the total flux of the Sigma[1] and s.max 
     used to solved the advection equation for s.max
 
-    """
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+
+    Returns
+    -------
+    Fi_tot : Field
+        Total flux of Sigma[1] * s.max"""
+    
     Fi_diff = F_diff(sim,Sigma = sim.dust.Sigma*sim.dust.s.max[:,np.newaxis])
     Fi_adv = F_adv(sim,Sigma = sim.dust.Sigma*sim.dust.s.max[:,np.newaxis])
     Fi_tot = (Fi_diff + Fi_adv)[:,1]
@@ -184,6 +192,7 @@ def dt_smax(sim):
     -------
     dt_smax : float
         Particle growth time step"""
+    
     mask2 = sim.dust.S.tot[:, 1] < 0.
     mask2 = sim.dust.S.tot[:,1] * sim.dust.Sigma[:,0] - sim.dust.S.tot[:,0] * sim.dust.Sigma[:,1] < 0.
     f = sim.dust.Sigma[:,1]/sim.dust.Sigma.sum(-1)
@@ -237,6 +246,7 @@ def finalize(sim):
     ----------
     sim : Frame
         Parent integration frame"""
+    
     Nm_s = int(sim.grid._Nm_short)
     Nr = int(sim.grid.Nr)
 
@@ -595,7 +605,20 @@ def F_adv(sim, Sigma=None):
 
 
 def F_diff(sim, Sigma=None):
-    """Function calculates the diffusive flux at the cell interfaces"""
+    """Function calculates the diffusive flux at the cell interfaces
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    Sigma : Field, optional, default : None
+        Surface density to be used if defaults to sim.dust.Sigma
+    
+    Returns
+    -------
+    Fi : Field
+        Diffusive mass fluxes through the grid cell interfaces"""
+    
     if Sigma is None:
         Sigma = sim.dust.Sigma
 
@@ -800,7 +823,15 @@ def S_tot_ext(sim, Sigma=None):
         ret += comp.dust.S_Sigma
 
     return ret
+
 def enforce_f(sim):
+    """Function enforces the minimum mass fraction in large particles.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    """
 
     delta = np.maximum( 0., sim.dust.f.crit * sim.dust.Sigma[...].sum(-1) - sim.dust.Sigma[:,1])
     sim.dust.s.max = np.maximum( sim.dust.s.lim*np.ones_like(sim.dust.s.max) ,sim.dust.s.max + delta * dadsig(sim))
@@ -815,9 +846,33 @@ def enforce_f(sim):
 
 
 def dadsig(sim):
+    """Function calculates the derivative of smax with respect to Sigma1.
+    
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+        
+    Returns
+    -------
+    dadsig : Field
+        Derivative of smax with respect to Sigma1"""
+    
     return dust_f.dadsig(sim.dust.s.lim, sim.dust.qrec,sim.dust.f.crit,  sim.dust.s.max, sim.dust.s.min, sim.dust.Sigma)
 
 def dsigda(sim):
+    """Function calculates the derivative of Sigma1 with respect to smax.
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    
+    Returns
+    -------
+    dsigda : Field
+        Derivative of Sigma1 with respect to smax"""
+    
     return dust_f.dsigda(sim.dust.s.lim, sim.dust.qrec,sim.dust.f.crit,  sim.dust.s.max, sim.dust.s.min, sim.dust.Sigma)
 
 
@@ -1045,6 +1100,24 @@ def vrad_mod(sim):
 
 
 def Y_jacobian(sim, x, dx=None, *args, **kwargs):
+    """Function calculates the Jacobian for the statevector that includes smax. i.e. [Sigma, smax*Sigma]
+
+    Parameters
+    ----------
+    sim : Frame
+        Parent simulation frame
+    x : IntVar
+        Integration variable
+    dx : float, optional, default : None
+        stepsize defaults to x.stepsize
+    args : additional positional arguments
+    kwargs : additional keyword arguments
+
+    Returns
+    -------
+    jac : Sparse csc_matrix
+        Dust Jacobian including smax with size (3*Nr, 3*Nr)"""
+
     # Helper variables for convenience
     if dx is None:
         dt = x.stepsize
