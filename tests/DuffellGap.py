@@ -68,7 +68,7 @@ if __name__ == '__main__':
     alpha_mod = duffell2020(sim.grid.r, a_p, q_p, h, sim.ini.gas.alpha)
     sim.gas.Sigma[...]  /= alpha_mod/sim.ini.gas.alpha
     sim.dust.Sigma[...] /= (alpha_mod/sim.ini.gas.alpha)[:, None]
-
+    sim.components.Default.gas.Sigma = sim.gas.Sigma.copy()
 
     sim.gas.rho.update()
     sim.gas.P.update()
