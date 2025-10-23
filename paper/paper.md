@@ -18,6 +18,9 @@ authors:
   - name: Sebastian Stammler
     orcid: 0000-0002-1589-1796
     affiliation: 1
+  - name: Anna B. T. Penzlin
+    orcid: 0000-0002-8873-6826
+    affiliation: 1
 affiliations:
  - name: University Observatory, Faculty of Physics, Ludwig-Maximilians-Universität München, Scheinerstr. 1, 81679 Munich, Germany
    index: 1
@@ -29,13 +32,15 @@ bibliography: paper.bib
 
 # Summary 
 
-`TriPodPy` is a code simulating the dust evolution in protoplanetary disks using the parametric dust model presented in [@Pfeil2024]. It uses this model to compute the dust evolution in protoplanetary disks in one 1-D., It's written in `python` and the core routines are implemented in `Fortran90`. The code not only solves for the evolution of the dust but also the gas disk with the canonical $\alpha$-description. In addition to the original model, we added descriptions of tracers for the dust and gas and compositional tracking of additional components.
+`TriPodPy` is a code simulating the dust evolution including dust growth and dynamics in protoplanetary disks using the parametric dust model presented in [@Pfeil2024].
+The simulation evolves a dust distribution in a one 1-D grid in the radial direction.
+It's written in `python` and the core routines are implemented in `Fortran90`. The code not only solves for the evolution of the dust but also the gas disk with the canonical `Shakura-Sunyaev` $\alpha$-description. In addition to the original model, we added descriptions of tracers for the dust and gas and compositional tracking of additional components.
 
 # Statment of Need
 
 Simulating the dust evolution in protoplanetary disks including growth and transport is vital to understanding planet formation and the structure of protoplanetary disks. There exist multiple open-source codes that tackle this problem by either solving the Smoluchowski Equation, e.g. `Dustpy`[@Dustpy] or `CuDisc`[@CuDisc] or using a Monte Carlo approach (e.g. `Mcdust` [@Vaikundaraman]) to simulate the mutual collisions between dust grains. However, all these simulations are computationally expensive, which calls for parametrised dust evolution models that can be used, for example, for population studies. Previous models, e.g. `Twopoppy` [@twopop], were not designed for disks with radial sub-structures and were not calibrated for different stellar masses.
 
-These shortcomings are solved with the Tripod Dust model. It describes the dust size distribution with a truncated power law, which allows the simulation full access to the dust size distribution, which is essential to accurately model the dust evoluion and additional physical effects like photoevaporation. Additionaly with the additions of the compositional traking and tracers simulating the chemical composition of protoplanetary disk is also possible in a way that evolves the gas and dust in a selfconsistent way.
+These shortcomings are solved with the Tripod Dust model. It describes the dust size distribution with a truncated power law, which allows the simulation full access to the dust size distribution, which is essential to accurately model the dust evoluion and additional physical effects like photoevaporation. Additionally by including the compositional traking and tracers, simulating the chemical composition of protoplanetary disk is also possible in a way that evolves the gas and dust in a selfconsistent way.
 
 # Comparison Simulation
 
@@ -50,7 +55,7 @@ We compare a Simulation with our code with one performed with the full coagulati
 | gas surface density power law $p$           | 0.85                  |
 | temperature power law $q$                   | 0.5                   |
 | gap position                                | 5.2 AU                |
-| $M_{planet}/M_{\star}$                      | $10^{-3}$             |
+| $M_\text{planet}/M_{\star}$                      | $10^{-3}$             |
 
 
 
@@ -58,7 +63,8 @@ We compare the particle size distribution from both simulations at 200'000 years
 
 ![](Figures/comparison.png)
 
-as we can see the maximal sizes and dust size distributions wmatch quite well with the full coagualtion code. Since the size distribution is allways assumed to be a power law capturing multimodal distributions is not possible as can be seen around 80 AU in the test simulation. This allso affects the dust disttribution on the iside of the gap as the dust size distribution i gaps deviates from the expected powerlaw as well, for a in depth discussion see [@Pfeil2024].
+The TriPoD simulation runs a factor 50 to 100 faster than the compared DustPy model.
+As we can see that the maximal sizes and dust size distributions match quite well with the full coagualtion code. Since the size distribution is always assumed to be a power law capturing multimodal distributions is not possible as can be seen around 80 AU in the test simulation. This also affects the dust distribution on the inside of the gap as the dust size distribution in gaps deviates from the expected powerlaw as well, for a in depth discussion see [@Pfeil2024].
 
 # Acknowledgments
 `TriPodPy` has received funding from the European Research Council (ERC) under the...
