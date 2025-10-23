@@ -7,9 +7,15 @@ Welcome to TripodPy's documentation!
 
 | ``TripodPy`` simulates the radial evolution of gas and dust in protoplanetary disks, including viscous evolution of the gas, advection and diffusion of the dust, as well as dust growth by an the TriPoD Method.
 
-| ``TriPoD`` algortihem has been published in `Pfeil et al. 2024 <https://ui.adsabs.harvard.edu/abs/2024A&A...691A..45P>`_.
+| The ``TriPoD`` method has been published in `Pfeil et al. 2024 <https://ui.adsabs.harvard.edu/abs/2024A&A...691A..45P>`_.
 
 | ``TripodPy`` requires a Python3 distribution and a Fortran compiler.
+
+| ``TripodPy`` can be installed via pip after cloning the repository:
+
+.. code-block:: bash
+
+   pip install .
 
 | ``TripodPy`` is based on the ``Simframe`` framework for scientific simulation (`Stammler & Birnstiel 2022 <https://joss.theoj.org/papers/10.21105/joss.03882>`_).
 | Please have a look at the `Simframe Documentation <https://simframe.rtfd.io/>`_ for details of its usage.
@@ -24,6 +30,7 @@ Welcome to TripodPy's documentation!
    3_advanced_customization
    4_standard_model
    5_compositional_tracking
+   6_evaporation_condensation
    api
 
 

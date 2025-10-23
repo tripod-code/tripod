@@ -1,10 +1,6 @@
 
 """Module containing standard functions for the composition"""
 import dustpy.constants as c
-from dustpy.std import dust_f as dp_dust_f
-import dustpy.std.dust as dp_dust
-from matplotlib.pylab import f
-from tripod.std import dust_f
 from tripod.std import dust as tridust
 import dustpy as dp
 import numpy as np
