@@ -23,6 +23,8 @@ for editable installation. In the latter case you need to have `meson-python` an
 
 `pip install meson-python ninja`
 
+__Note that currently the instalation with the GitHub repository versions of [`Dustpy`](https://github.com/stammler/dustpy) and [`Simframe`](https://github.com/stammler/simframe) is recomended to ensure full compatibility__.
+
 ## Requirements
 
 `TriPoDPy` needs a Python3 distribution and a Fortran compiler installed on your system.
