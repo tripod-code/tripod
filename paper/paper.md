@@ -1,5 +1,5 @@
 ---
-title: 'TriPodPy: Twopoppys cooler brother'
+title: 'TriPoDPy: Twopoppys cooler brother'
 tags:
   - dust evolution
   - protoplanetary disks
@@ -32,7 +32,7 @@ bibliography: paper.bib
 
 # Summary 
 
-`TriPodPy` is a code simulating the dust evolution, including dust growth and dynamics in protoplanetary disks using the parametric dust model presented in [@Pfeil2024]. The simulation evolves a dust distribution in a one-dimensional grid in the radial direction. It's written in `Python` and the core routines are implemented in `Fortran90`. The code not only solves for the evolution of the dust but also the gas disk with the canonical $\alpha$-description [@Shakura1973]. In addition to the original model, we added descriptions of tracers for the dust and gas and compositional tracking of additional components.
+`TriPoDPy` is a code simulating the dust evolution, including dust growth and dynamics in protoplanetary disks using the parametric dust model presented in [@Pfeil2024]. The simulation evolves a dust distribution in a one-dimensional grid in the radial direction. It's written in `Python` and the core routines are implemented in `Fortran90`. The code not only solves for the evolution of the dust but also the gas disk with the canonical $\alpha$-description [@Shakura1973]. In addition to the original model, we added descriptions of tracers for the dust and gas and compositional tracking of additional components.
 
 # Statement of Need
 
@@ -66,7 +66,7 @@ We compare the particle size distribution from both simulations at 400'000 years
 The `TriPoDPy` simulation runs a factor of 50 to 100 faster than the compared `DustPy` model. As we can see, the maximal sizes and dust size distributions match quite well with the full coagulation code. Since the size distribution is always assumed to be a power law, capturing multimodal distributions is not possible, as can be seen around 80 AU in the test simulation. This also affects the dust distribution on the inside of the gap, as the dust size distribution in gaps deviates from the expected power law as well. For an in-depth discussion, see [@Pfeil2024].
 
 # Acknowledgments
-`TriPodPy` has received funding from the European Research Council (ERC) under the...
+`TriPoDPy` has received funding from the European Research Council (ERC) under the...
 # References
 
 
