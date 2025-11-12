@@ -6,7 +6,7 @@
 
 `TriPoDPy` simulates the radial evolution of gas and dust in a protoplanetary disk, involving viscous eovlution of the gas disk, advection and diffusion of the dust disk, as well as dust growth via the TriPoD method [Pfeil+ 2024](https://ui.adsabs.harvard.edu/abs/2024A&A...691A..45P).
 
-Please read the [documentation](https://tripod.readthedocs.io) for a detailed description.
+Please read the [documentation](https://tripodpy.readthedocs.io/en/latest/) for a detailed description.
 By using any version of `TriPoDPy` you agree to these terms of usage.
 
 ## Installation
