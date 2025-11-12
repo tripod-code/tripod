@@ -10,10 +10,9 @@ build:
   os: ubuntu-22.04
   tools:
     python: "3.12"
-
-apt_packages:
-  - build-essential     # gives gcc, g++, make, etc.
-  - gfortran         
+  apt_packages:
+    - build-essential     # gives gcc, g++, make, etc.
+    - gfortran         
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
