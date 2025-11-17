@@ -66,7 +66,8 @@ We compare the particle size distribution from both simulations at 400'000 years
 The `TriPoDPy` simulation runs a factor of 50 to 100 faster than the compared `DustPy` model. As we can see, the maximal sizes and dust size distributions match quite well with the full coagulation code. Since the size distribution is always assumed to be a power law, capturing multimodal distributions is not possible, as can be seen around 100 AU in the test simulation. This also affects the dust distribution on the inside of the gap, as the dust size distribution in gaps deviates from the expected power law as well. For an in-depth discussion, see [@Pfeil2024].
 
 # Acknowledgments
-`TriPoDPy` has received funding from the European Research Council (ERC) under the...
+N.K. acknowledges funding from the European Union under the European Union’s Horizon Europe Research
+and Innovation Programme 101124282 (EARLYBIRD). 
 # References
 
 
