@@ -14,7 +14,7 @@ authors:
     affiliation: 2
   - name: Til Birnstiel
     orcid: 0000-0002-1899-8783
-    affiliation: 1
+    affiliation: "1, 3"
   - name: Sebastian Stammler
     orcid: 0000-0002-1589-1796
     affiliation: 1
@@ -25,7 +25,9 @@ affiliations:
  - name: University Observatory, Faculty of Physics, Ludwig-Maximilians-Universität München, Scheinerstr. 1, 81679 Munich, Germany
    index: 1
  - name: Center for Computational Astrophysics, Flatiron Institute, 162 Fifth Avenue, New York, NY 10010, USA
-   index: 2 
+   index: 2
+ - name: Exzellenzcluster ORIGINS, Boltzmannstr. 2, D-85748 Garching, Germany
+   index: 3
 date: 11 July 2025
 bibliography: paper.bib
 ---
@@ -66,8 +68,7 @@ We compare the particle size distribution from both simulations at 400'000 years
 The `TriPoDPy` simulation runs a factor of 50 to 100 faster than the compared `DustPy` model. As we can see, the maximal sizes and dust size distributions match quite well with the full coagulation code. Since the size distribution is always assumed to be a power law, capturing multimodal distributions is not possible, as can be seen around 100 AU in the test simulation. This also affects the dust distribution on the inside of the gap, as the dust size distribution in gaps deviates from the expected power law as well. For an in-depth discussion, see [@Pfeil2024].
 
 # Acknowledgments
-N.K. acknowledges funding from the European Union under the European Union’s Horizon Europe Research
-and Innovation Programme 101124282 (EARLYBIRD). 
+The authors acknowledge funding from the European Union under the European Unionʼs Horizon Europe Research and Innovation Programme 101124282 (EARLYBIRD) and funding by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under Germany’s Excellence Strategy - EXC-2094 - 390783311. Views and opinions expressed are, however, those of the authors only and do not necessarily reflect those of the European Union or the European Research Council. Neither the European Union nor the granting authority can be held responsible for them. 
 # References
 
 
