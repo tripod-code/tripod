@@ -12,17 +12,18 @@ authors:
   - name: Thomas Pfeil
     orcid: 0000-0002-4171-7302
     affiliation: 2
-  - name: Sandro Christian Paetzold
-    affiliation: 1
-  - name: Til Birnstiel
-    orcid: 0000-0002-1899-8783
-    affiliation: "1, 3"
   - name: Sebastian Stammler
     orcid: 0000-0002-1589-1796
     affiliation: 1
   - name: Anna B. T. Penzlin
     orcid: 0000-0002-8873-6826
     affiliation: 1
+  - name: Sandro Christian Paetzold
+    affiliation: 1
+    orcid: 0009-0005-5501-3620
+  - name: Til Birnstiel
+    orcid: 0000-0002-1899-8783
+    affiliation: "1, 3"
 affiliations:
  - name: University Observatory, Faculty of Physics, Ludwig-Maximilians-Universität München, Scheinerstr. 1, 81679 Munich, Germany
    index: 1
