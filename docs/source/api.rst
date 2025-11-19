@@ -1,7 +1,7 @@
 Module Reference
 ================
 
-.. automodapi:: tripod
+.. automodapi:: tripodpy
     :no-inheritance-diagram:
 
 .. automodapi:: tripodpy.simulation
