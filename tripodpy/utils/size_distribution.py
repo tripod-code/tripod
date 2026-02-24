@@ -149,3 +149,68 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
                 sig_da[ir, :i_up+1].sum() * sigma_d[ir]
 
     return a, a_i, sig_da
+
+def sim_size_distribution(sim, comp_name = None, agrid_min=None, agrid_max=None,Nm=None):
+    """
+    Computes the size distribution for a given component in the simulation.
+
+    Arguments:
+    ----------
+
+    sim : Simulation
+        The simulation object containing the component.
+
+    Optional arguments:
+
+    component_name : str
+        The name of the component for which to compute the size distribution.
+            If None, the size distribution is computed for the total dust surface density and qrec.
+
+    agrid_min : float
+        Minimum particle size for the size distribution grid.
+        Default is the minimum particle size in the simulation.
+
+    agrid_max : float
+        Maximum particle size for the size distribution grid.
+        Default is 1.5 times the maximum particle size in the simulation.
+
+    Nm : int
+        Number of size bins for the size distribution grid.
+        Default is 7 mass bins per mass decade, which corresponds to 7*log10(mgrid_max/mgrid_min) size bins.
+
+    Returns:
+    --------
+
+    a : array
+        Particle size grid (centers).
+
+    a_i : array
+        Particle size grid (interfaces).
+
+    sig_da : array
+        Particle size distribution of size (len(sigma_d), na), units of g/cm^2.
+    """
+    #set default grid limits if not provided
+    if agrid_min is None:
+        agrid_min = min(sim.dust.s.min)
+
+    if agrid_max is None:
+        agrid_max = max(sim.dust.s.max)*1.5
+
+    if comp_name is None:
+        sigma_d = sim.dust.Sigma.sum(axis=-1)
+        q = np.abs(sim.dust.qrec)
+    else:
+        comp = sim.components.__dict__[comp_name]
+        sigma_d = comp.dust.Sigma.sum(axis=-1)
+        q = np.abs((np.log(comp.dust.Sigma[:,1]/comp.dust.Sigma[:,0]))/np.log(sim.dust.s.max/np.sqrt(sim.dust.s.min*sim.dust.s.max)) - 4.)
+
+    # Dustpy like size distribution grid is logarithmic in mass -> Tripodpy assimes rhos = constant -> logarithmic in size
+    if Nm is None:
+        Nmbpd = 7 #number of mass bins per decade
+        logmmin = np.log10(4./3.*np.pi*agrid_min**3*sim.dust.rhos.min())
+        logmmax = np.log10(4./3.*np.pi*agrid_max**3*sim.dust.rhos.max())
+        decades = np.ceil(logmmax - logmmin)
+        Nm = int(decades * Nmbpd) + 1
+    
+    return get_size_distribution(sigma_d, sim.dust.s.max, q=q, na=Nm, agrid_min=agrid_min, agrid_max=agrid_max)
