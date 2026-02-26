@@ -45,16 +45,15 @@ def dt_Sigma(sim):
         mask[0, :] = False
         mask[-1:, :] = False
 
-        mask2 = sim.dust.S.tot[:, 1] < 0.
         mask2 = sim.dust.S.tot[:,1] * sim.dust.Sigma[:,0] - sim.dust.S.tot[:,0] * sim.dust.Sigma[:,1] < 0.
         f = sim.dust.Sigma[:,1]/sim.dust.Sigma.sum(-1)
         mask2 = np.logical_and(mask2, f<0.43)
         dsig_da = dsigda(sim)
         dt_pred = 10 * ((-0.1*  sim.dust.s.max[mask2] * dsig_da[mask2]) + sim.dust.Sigma[mask2,1] - sim.dust.f.crit* sim.dust.Sigma[mask2,:].sum(-1)) \
                 /(sim.dust.S.tot[mask2, 1] *(sim.dust.f.crit - 1.) + sim.dust.f.crit * sim.dust.S.tot[mask2, 0] + dsig_da[mask2] * sim.dust.s.sdot_coag[mask2] +sim.dust.S.smax_hyd[mask2]*dsig_da[mask2])
-        dt_pred = np.where(dt_pred != dt_pred, 0, dt_pred)  
+        dt_pred = np.where(dt_pred != dt_pred, 1e100, dt_pred)  
         dt_pred = np.abs(dt_pred)
-        dt_pred = np.where(dt_pred == np.inf, 0, dt_pred)
+        dt_pred = np.where(dt_pred == np.inf, 1e100, dt_pred)
 
         dt = np.ones_like(sim.dust.Sigma)*1e100
         dt[mask] = np.abs(sim.dust.Sigma[mask] / sim.dust.S.tot[mask])
