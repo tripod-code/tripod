@@ -41,9 +41,19 @@ bibliography: paper.bib
 
 # Statement of Need
 
-Simulating the dust evolution in protoplanetary disks, including growth and transport, is vital to understanding planet formation and the structure of protoplanetary disks. There exist multiple open-source codes that tackle this problem by either solving the Smoluchowski Equation, e.g. `Dustpy`[@Dustpy] or `CuDisc`[@CuDisc] or using a Monte Carlo approach (e.g. `Mcdust` [@Vaikundaraman]) to simulate the mutual collisions between dust grains. However, all these simulations are computationally expensive, which calls for parametrised dust evolution models that can be used, for example, for population studies. Previous models, e.g. `Twopoppy` [@twopop], were not designed for disks with radial sub-structures and were not calibrated for different stellar masses.
+Simulating the dust evolution in protoplanetary disks, including growth and transport, is vital to understanding planet formation and the structure of protoplanetary disks. `TriPoDPy` describes the vertically integrated dust size distribution with a truncated power law, which allows the simulation full access to the dust size distribution, which is essential to accurately model the dust evolution and additional physical effects like photoevaporation. Additionally, TriPodPy enables the addition of tracers in gas and dust, which could be used for tracking of chemical composition, electrical charge, and other parameters. All these features make it a valuable tool for astronomers to quickly model the dust evolution of protoplanetary disks.
 
-These shortcomings are solved with the Tripod Dust model. It describes the dust size distribution with a truncated power law, which allows the simulation full access to the dust size distribution, which is essential to accurately model the dust evolution and additional physical effects like photoevaporation. Additionally, TriPodPy enables the addition of tracers in gas and dust, which could be used for tracking of chemical composition, electrical charge, and other parameters.
+# State of the Field
+
+There exist multiple open-source codes that tackle the dust evolution in Protoplanetary disks by either solving the Smoluchowski Equation, e.g. `Dustpy` [@Dustpy] or `CuDisc` [@CuDisc] or using a Monte Carlo approach (e.g. `Mcdust` [@Vaikundaraman]) to simulate the mutual collisions between dust grains. However, all these simulations are computationally expensive, which calls for parametrised dust evolution models that can be used, for example, for population studies. Previous parametric models, e.g. `Twopoppy` [@twopop], were not designed for disks with radial sub-structures and were not calibrated for different stellar masses. These shortcomings are solved with the TriPoD Dust model.
+
+# Software design
+
+`TriPoDPy` builds on the `Simframe` [@Simframe] framework to allow users to easily modify and use our code by handling file IO, etc. To increase performance, the core routines have been implemented in `Fortran90`. Since we are solving the same problem as the full Smoluchowski solver `Dustpy`, our code inherits several shared routines, making it easy for users familiar with `Dustpy` to adopt the code and convert setups between the two codes.
+
+# Research impact statement
+
+Currently, there are multiple ongoing projects that use this code, with the first results already in preprint [@ziampras2026planetformationinneredge]. Since the code is a straight upgrade over the widely used predecessor `Twopoppy` [@twopop] (with over 700 citations) for most cases, we expect many projects to make use of our code.
 
 # Comparison Simulation
 
@@ -72,6 +82,11 @@ The `TriPoDPy` simulation runs a factor of 50 to 100 faster than the compared `D
 
 # Acknowledgments
 The authors acknowledge funding from the European Union under the European Unionʼs Horizon Europe Research and Innovation Programme 101124282 (EARLYBIRD) and funding by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under Germany’s Excellence Strategy - EXC-2094 - 390783311. Views and opinions expressed are, however, those of the authors only and do not necessarily reflect those of the European Union or the European Research Council. Neither the European Union nor the granting authority can be held responsible for them. 
+
+# AI usage disclosure
+
+AI (GitHub Copilot) was used to generate implementation ideas for the code, however all prompts were subsequently checked and corrected manually.
+
 # References
 
 
