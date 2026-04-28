@@ -65,17 +65,17 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
     ----------
 
     sigma_d : array
-        dust surface density array (shape (nr) where nr is the number of radial bins)
+        dust surface density array, shape (nr,) or (nr, nphi)
 
     a_max : array
-        maximum particle size array (shape (nr) where nr is the number of radial bins)
+        maximum particle size array, shape (nr,) or (nr, nphi)
 
     Keywords:
     ---------
 
     q : float | array
         particle size index, n(a) propto a**-q
-        if array, it has to have the same length as sigma_d
+        scalar, shape (nr,), or shape (nr, naz) matching sigma_d
 
     na : int
         number of particle size bins
@@ -96,9 +96,16 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
         particle size grid (interfaces)
 
     sig_da : array
-        particle size distribution of size (len(sigma_d), na),
-        units of g/cm^2, so integrated over the bins.
+        particle size distribution, shape (nr, na) for 1-D input or
+        (nr, nphi, na) for 2-D input, units of g/cm^2 integrated over bins.
     """
+
+    sigma_d = np.asarray(sigma_d)
+    a_max = np.asarray(a_max)
+    input_ndim = sigma_d.ndim
+    nd_none = (None,) * input_ndim
+    size_idx = nd_none + (slice(None),)
+    q_arr = np.array(q)[..., None]
 
     if agrid_min is None:
         agrid_min = a_max.min()
@@ -106,51 +113,25 @@ def get_size_distribution(sigma_d, a_max, q=3.5, na=10, agrid_min=None, agrid_ma
     if agrid_max is None:
         agrid_max = 2 * a_max.max()
 
-    nr = len(sigma_d)
-    sig_da = np.zeros([nr, na]) + 1e-100
-
     a_i = np.logspace(np.log10(agrid_min), np.log10(agrid_max), na + 1)
     a = 0.5 * (a_i[1:] + a_i[:-1])
 
-    # we want to turn q into an array if it isn't one already
-    q = q * np.ones(nr)
+    # our cell integral goes always from the lower interface up to either the upper interface or to a_max
+    a_left = a_i[:-1][size_idx]
+    a_right = np.where(
+        a_i[1:][size_idx] < a_max[..., None],
+        a_i[1:][size_idx],
+        np.maximum(a_max[..., None], a_i[:-1][size_idx]))
 
-    for ir in range(nr):
-
-        if a_max[ir] <= agrid_min:
-            sig_da[ir, 0] = 1
-            i_up = 0
-        else:
-            i_up = np.where(a_i < a_max[ir])[0][-1]
-            i_up = min(i_up, na - 1)  # Ensure i_up does not exceed na - 1
-
-            # filling all bins that are strictly below a_max
-
-            if q[ir] == 4.0:
-                for ia in range(i_up):
-                    sig_da[ir, ia] = np.log(a_i[ia + 1] / a_i[ia])
-
-                # filling the bin that contains a_max
-                sig_da[ir, i_up] = np.log(a_max[ir] / a_i[i_up])
-            else:
-                for ia in range(i_up):
-                    sig_da[ir, ia] = \
-                        a_i[ia + 1]**(4 - q[ir]) - a_i[ia]**(4 - q[ir])
-
-                # filling the bin that contains a_max
-                sig_da[ir, i_up] = a_max[ir]**(4 - q[ir]) - \
-                    a_i[i_up]**(4 - q[ir])
-
-        # normalize
-        if(sig_da[ir, :i_up+1].sum() == 0. or sig_da[ir, :i_up+1].sum() != sig_da[ir, :i_up+1].sum()):
-            sig_da[ir, :i_up+1] = sigma_d[ir]/float(i_up)
-        else:
-            sig_da[ir, :i_up+1] = sig_da[ir, :i_up+1] / \
-                sig_da[ir, :i_up+1].sum() * sigma_d[ir]
+    sig_da = sigma_d[..., None] * np.where(
+        q_arr == 4,
+        np.log(a_right / a_left) / np.log(a_max / agrid_min)[..., None],
+        (a_right**(4 - q_arr) - a_left**(4 - q_arr)) / (a_max[..., None]**(4 - q_arr) - agrid_min**(4 - q_arr)))
 
     return a, a_i, sig_da
 
-def sim_size_distribution(sim, comp_name = None, agrid_min=None, agrid_max=None,Nm=None):
+
+def sim_size_distribution(sim, comp_name=None, agrid_min=None, agrid_max=None, Nm=None):
     """
     Computes the size distribution for a given component in the simulation.
 
@@ -190,7 +171,7 @@ def sim_size_distribution(sim, comp_name = None, agrid_min=None, agrid_max=None,
     sig_da : array
         Particle size distribution of size (len(sigma_d), na), units of g/cm^2.
     """
-    #set default grid limits if not provided
+    # set default grid limits if not provided
     if agrid_min is None:
         agrid_min = min(sim.dust.s.min)
 
@@ -203,14 +184,15 @@ def sim_size_distribution(sim, comp_name = None, agrid_min=None, agrid_max=None,
     else:
         comp = sim.components.__dict__[comp_name]
         sigma_d = comp.dust.Sigma.sum(axis=-1)
-        q = np.abs((np.log(comp.dust.Sigma[:,1]/comp.dust.Sigma[:,0]))/np.log(sim.dust.s.max/np.sqrt(sim.dust.s.min*sim.dust.s.max)) - 4.)
+        q = np.abs((np.log(comp.dust.Sigma[:, 1]/comp.dust.Sigma[:, 0]))/np.log(
+            sim.dust.s.max/np.sqrt(sim.dust.s.min*sim.dust.s.max)) - 4.)
 
     # Dustpy like size distribution grid is logarithmic in mass -> Tripodpy assimes rhos = constant -> logarithmic in size
     if Nm is None:
-        Nmbpd = 7 #number of mass bins per decade
+        Nmbpd = 7  # number of mass bins per decade
         logmmin = np.log10(4./3.*np.pi*agrid_min**3*sim.dust.rhos.min())
         logmmax = np.log10(4./3.*np.pi*agrid_max**3*sim.dust.rhos.max())
         decades = np.ceil(logmmax - logmmin)
         Nm = int(decades * Nmbpd) + 1
-    
+
     return get_size_distribution(sigma_d, sim.dust.s.max, q=q, na=Nm, agrid_min=agrid_min, agrid_max=agrid_max)
