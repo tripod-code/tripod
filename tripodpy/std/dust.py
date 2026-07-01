@@ -198,7 +198,7 @@ def dt_smax(sim):
     mask2 = np.logical_and(mask2, f<0.43)
     smax_dot_hyd = sim.dust.S.smax_hyd
 
-    smax_dot = np.minimum(np.abs(sim.dust.s.sdot_coag[1:-1]) , np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd[1:-1]))
+    smax_dot = np.maximum(np.abs(sim.dust.s.sdot_coag[1:-1]) , np.abs(sim.dust.s.sdot_coag[1:-1]+smax_dot_hyd[1:-1]))
     dt = sim.dust.s.max[1:-1] / (smax_dot + 1e-100)
     dt[mask2[1:-1]] = 1e100
     return dt.min(initial=1e100)
@@ -272,7 +272,7 @@ def finalize(sim):
         sim.dust.Sigma = np.maximum(temp, sim.dust.SigmaFloor)
 
 
-    dp_dust.boundary(sim)
+    #dp_dust.boundary(sim)
     dp_dust.enforce_floor_value(sim)
     enforce_f(sim)
     sim.dust.s.max.derivative()
@@ -1078,7 +1078,7 @@ def D_mod(sim):
     # warning this is only done beacuse opf the pluto code -> times gammma factor athe the end
     v2 = sim.dust.delta.rad * sim.gas.cs**2
     Diff = dp_dust_f.d(v2, sim.grid.OmegaK, sim.dust.St*sim.dust.f.drift)
-    Diff[:1, ...] = 0.
+    Diff[:2, ...] = 0.
     Diff[-2:, ...] = 0.
     return Diff
 
@@ -1196,7 +1196,7 @@ def Y_jacobian(sim, x, dx=None, *args, **kwargs):
     row_out = np.zeros(3)+(Nr-1)
     col_out = np.arange(0, -3, -1)+(Nr-1)
 
-    if sim.dust.boundary.outer is not None:
+    if sim.dust.s.boundary.outer is not None:
         # Given value    
         
         if sim.dust.s.boundary.outer.condition == "const_grad":
